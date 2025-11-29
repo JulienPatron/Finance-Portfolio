@@ -19,7 +19,8 @@ st.markdown("""
 <style>
     .block-container {padding-top: 1rem;}
     h1, h2, h3 {font-family: 'Roboto', sans-serif; font-weight: 400;}
-    .stMetric {padding: 10px; border-radius: 5px; border: 1px solid #e0e0e0;}
+    /* Metrics styling adjusted for Dark Mode compatibility (transparent background) */
+    .stMetric {padding: 5px; border-radius: 5px;} 
     footer {visibility: hidden;}
 </style>
 """, unsafe_allow_html=True)
@@ -58,24 +59,22 @@ with st.spinner('Fetching Market Data & Running Regression...'):
 
     # 1. Get Risk Free Rate Data
     try:
-        # Fetching TNX
         tnx = yf.download("^TNX", start=start_date, end=end_date, progress=False)
         
-        # Handle MultiIndex if present (Close column)
+        # Handle MultiIndex
         if isinstance(tnx.columns, pd.MultiIndex):
             tnx = tnx['Close']
         elif 'Close' in tnx.columns:
             tnx = tnx['Close']
             
-        # --- FIX TIMEZONE ISSUES ---
-        # Force remove timezone info to avoid mismatch errors
+        # FIX TIMEZONE
         tnx.index = pd.to_datetime(tnx.index).tz_localize(None)
         
         rf_series = tnx.dropna() / 100 
         
         if not rf_series.empty:
             rf_current = rf_series.iloc[-1]
-            if isinstance(rf_current, pd.Series): # Handle edge case where iloc returns series
+            if isinstance(rf_current, pd.Series): 
                 rf_current = rf_current.iloc[0]
             rf_history_avg = rf_series.mean()
             if isinstance(rf_history_avg, pd.Series):
@@ -93,22 +92,19 @@ with st.spinner('Fetching Market Data & Running Regression...'):
     try:
         raw_data = yf.download(all_symbols, start=start_date, end=end_date, progress=False)
         
-        # --- DATA STRUCTURE NORMALIZATION ---
-        # yfinance returns MultiIndex (Price, Ticker) sometimes. We want just 'Close'.
+        # DATA NORMALIZATION
         if isinstance(raw_data.columns, pd.MultiIndex):
             data = raw_data['Close']
         elif 'Close' in raw_data.columns:
             data = raw_data['Close']
         else:
-            data = raw_data # Fallback
+            data = raw_data 
             
-        # --- FIX TIMEZONE ISSUES (CRITICAL) ---
-        # Force remove timezone info from the main dataframe index
+        # FIX TIMEZONE (Critical)
         data.index = pd.to_datetime(data.index).tz_localize(None)
         
-        # Check if Benchmark exists
         if benchmark_input not in data.columns:
-            st.error(f"Benchmark '{benchmark_input}' not found in downloaded data. Columns: {list(data.columns)}")
+            st.error(f"Benchmark '{benchmark_input}' not found. Columns: {list(data.columns)}")
             st.stop()
             
     except Exception as e:
@@ -117,8 +113,6 @@ with st.spinner('Fetching Market Data & Running Regression...'):
 
     # 3. Calculate Returns
     returns = data.pct_change()
-    
-    # Separate Benchmark and Stocks
     bench_ret = returns[benchmark_input]
     stock_rets = returns.drop(columns=[benchmark_input], errors='ignore')
 
@@ -129,49 +123,37 @@ with st.spinner('Fetching Market Data & Running Regression...'):
     capm_data = []
     TRADING_DAYS = 252 
     rf_daily = rf_history_avg / TRADING_DAYS
-
-    # Prepare Benchmark Excess Return
     market_excess_series = bench_ret - rf_daily
 
     for ticker in stock_rets.columns:
         if ticker == benchmark_input: continue
 
-        # Stock Excess Return
         stock_excess_series = stock_rets[ticker] - rf_daily
 
-        # --- DATA ALIGNMENT & CLEANING ---
-        # Concatenate using the clean, timezone-naive indices
+        # PAIRWISE CLEANING
         df_reg = pd.concat([market_excess_series, stock_excess_series], axis=1)
         df_reg.columns = ['Market', 'Stock']
-        df_reg = df_reg.dropna() # Remove any row with missing data
+        df_reg = df_reg.dropna()
 
-        if len(df_reg) < 30:
-            # Not enough overlapping data points
-            continue
+        if len(df_reg) < 30: continue
 
         x = df_reg['Market'].values
         y = df_reg['Stock'].values
 
-        # Linear Regression
         try:
             beta, alpha_daily = np.polyfit(x, y, 1)
         except:
             continue
         
-        # R-Squared
         r_squared = 0
         if len(x) > 2:
             correlation_matrix = np.corrcoef(x, y)
             correlation_xy = correlation_matrix[0,1]
             r_squared = correlation_xy**2
 
-        # Annualize results
         alpha_annual = alpha_daily * TRADING_DAYS
-        
-        # Expected Return
         mkt_annual_ret = df_reg['Market'].mean() * TRADING_DAYS + rf_history_avg
         expected_return = rf_current + beta * (mkt_annual_ret - rf_current)
-        
         actual_return = df_reg['Stock'].mean() * TRADING_DAYS + rf_history_avg
 
         capm_data.append({
@@ -184,11 +166,8 @@ with st.spinner('Fetching Market Data & Running Regression...'):
             'Valuation': 'Undervalued' if alpha_annual > 0 else 'Overvalued'
         })
 
-    # --- SAFETY CHECK ---
     if not capm_data:
-        st.error("❌ No valid data found after alignment. Please check:")
-        st.write("- Is the 'Benchmark' ticker correct?")
-        st.write("- Do the stocks have enough history overlapping with the benchmark?")
+        st.error("❌ No valid data found. Check tickers or timeframe.")
         st.stop()
 
     df_capm = pd.DataFrame(capm_data).set_index('Ticker')
@@ -197,20 +176,19 @@ with st.spinner('Fetching Market Data & Running Regression...'):
     # 4. VISUALIZATION DASHBOARD
     # ==============================================================================
 
-    # --- KPI METRICS ---
-    col1, col2, col3, col4 = st.columns(4)
+    # --- SIDEBAR METRICS (Moved here) ---
     mkt_return_ann = bench_ret.mean() * 252
     
-    col1.metric("Benchmark", benchmark_input)
-    col2.metric("Market Return (Ann.)", f"{mkt_return_ann:.1%}")
-    col3.metric("Risk-Free Rate", f"{rf_current:.2%}")
-    col4.metric("Market Risk Prem.", f"{(mkt_return_ann - rf_current):.1%}")
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("Market Metrics")
+    st.sidebar.metric("Market Return (Ann.)", f"{mkt_return_ann:.1%}")
+    st.sidebar.metric("Risk-Free Rate (10Y US Bond)", f"{rf_current:.2%}")
+    st.sidebar.metric("Market Risk Prem.", f"{(mkt_return_ann - rf_current):.1%}")
 
-    st.markdown("---")
-
+    # --- MAIN CONTENT ---
     col_chart, col_table = st.columns([2, 1])
 
-    # --- CHART: SECURITY MARKET LINE (SML) ---
+    # --- CHART: SML ---
     with col_chart:
         st.subheader("Security Market Line (SML)")
         
@@ -240,7 +218,7 @@ with st.spinner('Fetching Market Data & Running Regression...'):
 
         st.pyplot(fig, use_container_width=True)
 
-    # --- TABLE: QUANTITATIVE DETAILS ---
+    # --- TABLE: DETAILS ---
     with col_table:
         st.subheader("Alpha Generation")
         
@@ -261,13 +239,3 @@ with st.spinner('Fetching Market Data & Running Regression...'):
                 )
             }
         )
-
-    st.markdown("---")
-
-    with st.expander("📝 Methodological Note"):
-        st.write("""
-        **CAPM Implementation:**
-        * **Data Alignment:** Returns are cleaned pairwise (Stock vs Benchmark) to maximize data availability.
-        * **Risk-Free Rate:** Uses ^TNX (10Y Treasury).
-        * **Alpha:** Jensen's Alpha (Annualized).
-        """)
