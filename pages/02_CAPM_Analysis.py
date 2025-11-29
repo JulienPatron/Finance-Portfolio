@@ -32,7 +32,7 @@ st.sidebar.header("Configuration")
 # A. Assets
 default_tickers = "AAPL, MSFT, TSLA, NVDA, JPM, KO, XOM"
 tickers_input = st.sidebar.text_input("Stocks (comma separated)", value=default_tickers)
-tickers = [x.strip().upper() for x in tickers_input.split(',')]
+tickers = [x.strip().upper() for x in tickers_input.split(',') if x.strip()]
 
 # B. Benchmark
 benchmark_input = st.sidebar.text_input("Benchmark", value="SPY").strip().upper()
@@ -56,28 +56,35 @@ with st.spinner('Fetching Market Data & Running Regression...'):
     end_date = datetime.date.today()
     start_date = end_date - datetime.timedelta(days=years_back*365)
 
-    # 1. Get Risk Free Rate Data (History for regression, Spot for SML)
+    # 1. Get Risk Free Rate Data
     try:
+        # Fetching TNX
         tnx = yf.download("^TNX", start=start_date, end=end_date, progress=False)['Close']
-        rf_series = tnx / 100  # Convert to decimal
-        rf_current = rf_series.iloc[-1]
-        rf_history_avg = rf_series.mean()
-    except:
-        # Fallback if Yahoo Finance fails on TNX
+        
+        # Clean RF Data separately
+        rf_series = tnx.dropna() / 100 
+        
+        if not rf_series.empty:
+            rf_current = rf_series.iloc[-1]
+            rf_history_avg = rf_series.mean()
+        else:
+            raise ValueError("Empty RF Data")
+            
+    except Exception:
         rf_current = 0.04
         rf_history_avg = 0.04
-        st.warning("Could not fetch ^TNX data. Using static 4.0% Risk-Free Rate.")
+        # On ne bloque pas l'app pour le taux sans risque, on prend une valeur par défaut
+        # st.warning("Using default Risk-Free Rate (4.0%) - Connection to ^TNX failed.")
 
     # 2. Download Stock & Benchmark Data
     all_symbols = tickers + [benchmark_input]
     try:
+        # IMPORTANT: On ne fait PAS de .dropna() global ici pour ne pas perdre les stocks
+        # qui ont un historique un peu plus court ou des jours fériés différents.
         data = yf.download(all_symbols, start=start_date, end=end_date, progress=False)['Close']
         
-        # Data Cleaning
-        data = data.dropna(axis=1, how='all').dropna()
-        
         if benchmark_input not in data.columns:
-            st.error(f"Benchmark '{benchmark_input}' data not found. Please check the symbol.")
+            st.error(f"Benchmark '{benchmark_input}' not found in data.")
             st.stop()
             
     except Exception as e:
@@ -85,67 +92,67 @@ with st.spinner('Fetching Market Data & Running Regression...'):
         st.stop()
 
     # 3. Calculate Returns (Arithmetic)
-    returns = data.pct_change().dropna()
+    # On laisse les NaN ici, on les gérera paire par paire
+    returns = data.pct_change()
     
     # Separate Benchmark and Stocks
     bench_ret = returns[benchmark_input]
-    stock_rets = returns.drop(columns=[benchmark_input])
+    stock_rets = returns.drop(columns=[benchmark_input], errors='ignore')
 
     # ==============================================================================
     # 3. QUANTITATIVE MODEL (CAPM REGRESSION)
     # ==============================================================================
     
     capm_data = []
-
-    # Annualize factor for Alpha/Return
     TRADING_DAYS = 252 
-
-    # Prepare Benchmark Excess Return for Regression (X axis)
-    # We use the historical average Rf for the regression period stability
     rf_daily = rf_history_avg / TRADING_DAYS
-    market_excess = bench_ret - rf_daily
+
+    # Prepare Benchmark Excess Return (Keep NaNs for now)
+    market_excess_series = bench_ret - rf_daily
 
     for ticker in stock_rets.columns:
-        # 1. Prepare inputs (Excess Returns)
-        y_raw = stock_rets[ticker] - rf_daily
-        x_raw = market_excess
+        if ticker == benchmark_input: continue
 
-        # 2. DATA CLEANING & ALIGNMENT (CRITICAL STEP)
-        # On combine les deux séries dans un DataFrame temporaire pour supprimer 
-        # les lignes où l'une des deux valeurs est NaN.
-        df_reg = pd.concat([x_raw, y_raw], axis=1).dropna()
+        # Stock Excess Return
+        stock_excess_series = stock_rets[ticker] - rf_daily
+
+        # --- DATA ALIGNMENT & CLEANING (The Fix) ---
+        # On combine le Benchmark et le Stock, puis on supprime les lignes 
+        # où L'UN OU L'AUTRE est manquant.
+        df_reg = pd.concat([market_excess_series, stock_excess_series], axis=1)
         df_reg.columns = ['Market', 'Stock']
-        
+        df_reg = df_reg.dropna() # ICI on nettoie proprement l'intersection
+
         # Security check: Need enough data points for regression
         if len(df_reg) < 30:
-            st.warning(f"Skipping {ticker}: Not enough data points aligned with Benchmark.")
+            # On passe silencieusement ou avec un warning léger
             continue
 
         x = df_reg['Market'].values
         y = df_reg['Stock'].values
 
-        # 3. Linear Regression (Polyfit degree 1)
-        # Slope = Beta, Intercept = Daily Alpha
+        # Linear Regression
         try:
             beta, alpha_daily = np.polyfit(x, y, 1)
-        except Exception as e:
-            st.warning(f"Could not calculate Beta for {ticker}: {e}")
+        except:
             continue
         
-        # Calculate R-Squared
-        correlation_matrix = np.corrcoef(x, y)
-        correlation_xy = correlation_matrix[0,1]
-        r_squared = correlation_xy**2
+        # R-Squared
+        r_squared = 0
+        if len(x) > 2:
+            correlation_matrix = np.corrcoef(x, y)
+            correlation_xy = correlation_matrix[0,1]
+            r_squared = correlation_xy**2
 
-        # Annualize Alpha
+        # Annualize results
         alpha_annual = alpha_daily * TRADING_DAYS
-
-        # Expected Return (CAPM Theory)
-        mkt_annual_ret = bench_ret.mean() * TRADING_DAYS
+        
+        # Expected Return calculation
+        # Note: We use the mean of the CLEANED benchmark data for consistency
+        mkt_annual_ret = df_reg['Market'].mean() * TRADING_DAYS + rf_history_avg
         expected_return = rf_current + beta * (mkt_annual_ret - rf_current)
         
-        # Actual Annualized Return
-        actual_return = stock_rets[ticker].mean() * TRADING_DAYS
+        actual_return = df_reg['Stock'].mean() * TRADING_DAYS + rf_history_avg
 
         capm_data.append({
             'Ticker': ticker,
@@ -157,6 +164,11 @@ with st.spinner('Fetching Market Data & Running Regression...'):
             'Valuation': 'Undervalued' if alpha_annual > 0 else 'Overvalued'
         })
 
+    # --- SAFETY CHECK: IF NO DATA ---
+    if not capm_data:
+        st.error("❌ No valid data found. This usually happens if the tickers are incorrect or if the analysis period is too short for the selected assets.")
+        st.stop()
+
     df_capm = pd.DataFrame(capm_data).set_index('Ticker')
 
     # ==============================================================================
@@ -165,12 +177,13 @@ with st.spinner('Fetching Market Data & Running Regression...'):
 
     # --- KPI METRICS ---
     col1, col2, col3, col4 = st.columns(4)
+    # Recalculate global market metrics for display (using available data)
     mkt_return_ann = bench_ret.mean() * 252
     
     col1.metric("Benchmark", benchmark_input)
     col2.metric("Market Return (Ann.)", f"{mkt_return_ann:.1%}")
-    col3.metric("Risk-Free Rate (Current)", f"{rf_current:.2%}")
-    col4.metric("Market Risk Prem. (MRP)", f"{(mkt_return_ann - rf_current):.1%}")
+    col3.metric("Risk-Free Rate", f"{rf_current:.2%}")
+    col4.metric("Market Risk Prem.", f"{(mkt_return_ann - rf_current):.1%}")
 
     st.markdown("---")
 
@@ -182,38 +195,31 @@ with st.spinner('Fetching Market Data & Running Regression...'):
         
         fig, ax = plt.subplots(figsize=(10, 6))
         
-        # 1. Plot SML Line (Theoretical)
-        # X-axis range: from 0 to max beta + margin
+        # X-axis range
         max_beta = df_capm['Beta'].max()
+        # Fallback if max_beta is weird
+        if pd.isna(max_beta) or max_beta < 0.5: max_beta = 1.5
+            
         x_range = np.linspace(0, max_beta * 1.2, 100)
         
-        # SML Equation: y = Rf + x * (Rm - Rf)
-        # Using CURRENT Rf and Historical MRP for the "Forward looking" line
+        # SML Line
         y_sml = rf_current + x_range * (mkt_return_ann - rf_current)
-        
         ax.plot(x_range, y_sml, color='#555555', linestyle='--', linewidth=2, label='SML (Fair Value)', alpha=0.8)
 
-        # 2. Plot Tickers
-        # Color coding based on Alpha
+        # Plot Tickers
         colors = ['#228B22' if val == 'Undervalued' else '#D90429' for val in df_capm['Valuation']]
         
         ax.scatter(df_capm['Beta'], df_capm['Actual Return'], c=colors, s=100, zorder=5, edgecolors='white', linewidth=1)
         
-        # Labels
         for ticker, row in df_capm.iterrows():
             ax.text(row['Beta'], row['Actual Return'] + 0.005, f"  {ticker}", fontsize=9, fontweight='bold')
 
-        # Formatting
         ax.set_xlabel('Beta (Systematic Risk)')
-        ax.set_ylabel('Annualized Actual Return')
+        ax.set_ylabel('Annualized Return')
         ax.yaxis.set_major_formatter(mtick.PercentFormatter(1.0, decimals=0))
         ax.set_xlim(left=0)
         ax.grid(True, alpha=0.2)
         ax.legend(loc='upper left')
-
-        # Annotation Helper
-        ax.text(0.1, y_sml[-1], "Undervalued (Buy)\n(Alpha > 0)", color='#228B22', fontsize=8, ha='left')
-        ax.text(max_beta, rf_current, "Overvalued (Sell)\n(Alpha < 0)", color='#D90429', fontsize=8, ha='right')
 
         st.pyplot(fig, use_container_width=True)
 
@@ -221,11 +227,9 @@ with st.spinner('Fetching Market Data & Running Regression...'):
     with col_table:
         st.subheader("Alpha Generation")
         
-        # Formatting for display
         df_display = df_capm[['Beta', 'Alpha (%)', 'Valuation']].copy()
         df_display = df_display.sort_values(by='Alpha (%)', ascending=False)
         
-        # Format percentages
         df_display['Alpha (%)'] = df_display['Alpha (%)'].apply(lambda x: f"{x:.2%}")
         df_display['Beta'] = df_display['Beta'].apply(lambda x: f"{x:.2f}")
 
@@ -243,15 +247,10 @@ with st.spinner('Fetching Market Data & Running Regression...'):
 
     st.markdown("---")
 
-    # --- EXPLANATION SECTION ---
-    with st.expander("📝 Methodological Note (For Recruiters)"):
+    with st.expander("📝 Methodological Note"):
         st.write("""
-        **Capital Asset Pricing Model (CAPM) Implementation:**
-        
-        1.  **Data Source:** Yahoo Finance (Adjusted Close).
-        2.  **Risk-Free Rate ($R_f$):** Uses the 10-Year US Treasury Yield (`^TNX`). 
-            * *Calculation:* Historical average used for regression intercepts; Current spot rate used for SML construction.
-        3.  **Beta ($\beta$):** Calculated via Linear Regression of Stock Excess Returns vs. Benchmark Excess Returns.
-        4.  **Alpha ($\alpha$):** Jensen's Alpha (Intercept). Represents the annualized return in excess of the theoretical CAPM return.
-            * $$ \alpha = R_p - [R_f + \beta_p (R_m - R_f)] $$
+        **CAPM Implementation:**
+        * **Data Alignment:** Returns are cleaned pairwise (Stock vs Benchmark) to maximize data availability.
+        * **Risk-Free Rate:** Uses ^TNX (10Y Treasury).
+        * **Alpha:** Jensen's Alpha (Annualized).
         """)
