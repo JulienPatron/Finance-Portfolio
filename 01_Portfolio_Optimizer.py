@@ -37,7 +37,7 @@ target_input = st.sidebar.number_input("Target Annual Return (%)", min_value=0.0
 target_return = target_input / 100
 
 # C. Time Horizon
-years_back = st.sidebar.slider("Historical Data (Years)", min_value=1, max_value=10, value=5)
+years_back = st.sidebar.slider("Historical Data", min_value=1, max_value=10, value=5)
 
 # D. Simulation Settings
 n_simulations = 10000
