@@ -19,7 +19,7 @@ st.markdown("""
 <style>
     .block-container {padding-top: 1rem;}
     h1, h2, h3 {font-family: 'Roboto', sans-serif; font-weight: 400;}
-    .stMetric {background-color: #f9f9f9; padding: 10px; border-radius: 5px; border: 1px solid #e0e0e0;}
+    .stMetric {padding: 10px; border-radius: 5px; border: 1px solid #e0e0e0;}
     footer {visibility: hidden;}
 </style>
 """, unsafe_allow_html=True)
@@ -114,11 +114,6 @@ with st.spinner('Fetching Market Data & Running Regression...'):
     except Exception as e:
         st.error(f"Data Download Error: {e}")
         st.stop()
-
-    # Debug Expander (Optional, pour vérifier les données si besoin)
-    with st.expander("🔍 Debug Raw Data"):
-        st.write("Data Head:", data.head())
-        st.write("Data Types:", data.dtypes)
 
     # 3. Calculate Returns
     returns = data.pct_change()
