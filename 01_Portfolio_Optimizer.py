@@ -116,11 +116,7 @@ with st.spinner('Processing market data...'):
     # 3. AFFICHAGE DES RÉSULTATS
     # ==============================================================================
     
-<<<<<<< HEAD
     # --- SECTION 1: EFFICIENT FRONTIER (GRAPHIQUE EN PREMIER) ---
-=======
-    # --- SECTION 1: EFFICIENT FRONTIER (PLEINE LARGEUR) ---
->>>>>>> 99b0c0258749c560447134126107b27f661d8e1a
     st.subheader("1. Efficient Frontier & Capital Allocation")
     
     # On crée un figure plus large (width=12) pour qu'elle prenne toute la place
