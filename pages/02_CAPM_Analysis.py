@@ -106,13 +106,31 @@ with st.spinner('Fetching Market Data & Running Regression...'):
     market_excess = bench_ret - rf_daily
 
     for ticker in stock_rets.columns:
-        # Stock Excess Return (Y axis)
-        y = stock_rets[ticker] - rf_daily
-        x = market_excess
+        # 1. Prepare inputs (Excess Returns)
+        y_raw = stock_rets[ticker] - rf_daily
+        x_raw = market_excess
 
-        # Linear Regression (Polyfit degree 1)
+        # 2. DATA CLEANING & ALIGNMENT (CRITICAL STEP)
+        # On combine les deux séries dans un DataFrame temporaire pour supprimer 
+        # les lignes où l'une des deux valeurs est NaN.
+        df_reg = pd.concat([x_raw, y_raw], axis=1).dropna()
+        df_reg.columns = ['Market', 'Stock']
+        
+        # Security check: Need enough data points for regression
+        if len(df_reg) < 30:
+            st.warning(f"Skipping {ticker}: Not enough data points aligned with Benchmark.")
+            continue
+
+        x = df_reg['Market'].values
+        y = df_reg['Stock'].values
+
+        # 3. Linear Regression (Polyfit degree 1)
         # Slope = Beta, Intercept = Daily Alpha
-        beta, alpha_daily = np.polyfit(x, y, 1)
+        try:
+            beta, alpha_daily = np.polyfit(x, y, 1)
+        except Exception as e:
+            st.warning(f"Could not calculate Beta for {ticker}: {e}")
+            continue
         
         # Calculate R-Squared
         correlation_matrix = np.corrcoef(x, y)
@@ -123,8 +141,6 @@ with st.spinner('Fetching Market Data & Running Regression...'):
         alpha_annual = alpha_daily * TRADING_DAYS
 
         # Expected Return (CAPM Theory)
-        # E(R) = Rf + Beta * (Rm - Rf)
-        # Here we use current Market Return expectation or historical average
         mkt_annual_ret = bench_ret.mean() * TRADING_DAYS
         expected_return = rf_current + beta * (mkt_annual_ret - rf_current)
         
