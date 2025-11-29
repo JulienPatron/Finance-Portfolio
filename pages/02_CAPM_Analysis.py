@@ -59,40 +59,68 @@ with st.spinner('Fetching Market Data & Running Regression...'):
     # 1. Get Risk Free Rate Data
     try:
         # Fetching TNX
-        tnx = yf.download("^TNX", start=start_date, end=end_date, progress=False)['Close']
+        tnx = yf.download("^TNX", start=start_date, end=end_date, progress=False)
         
-        # Clean RF Data separately
+        # Handle MultiIndex if present (Close column)
+        if isinstance(tnx.columns, pd.MultiIndex):
+            tnx = tnx['Close']
+        elif 'Close' in tnx.columns:
+            tnx = tnx['Close']
+            
+        # --- FIX TIMEZONE ISSUES ---
+        # Force remove timezone info to avoid mismatch errors
+        tnx.index = pd.to_datetime(tnx.index).tz_localize(None)
+        
         rf_series = tnx.dropna() / 100 
         
         if not rf_series.empty:
             rf_current = rf_series.iloc[-1]
+            if isinstance(rf_current, pd.Series): # Handle edge case where iloc returns series
+                rf_current = rf_current.iloc[0]
             rf_history_avg = rf_series.mean()
+            if isinstance(rf_history_avg, pd.Series):
+                 rf_history_avg = rf_history_avg.iloc[0]
         else:
-            raise ValueError("Empty RF Data")
+            rf_current = 0.04
+            rf_history_avg = 0.04
             
-    except Exception:
+    except Exception as e:
         rf_current = 0.04
         rf_history_avg = 0.04
-        # On ne bloque pas l'app pour le taux sans risque, on prend une valeur par défaut
-        # st.warning("Using default Risk-Free Rate (4.0%) - Connection to ^TNX failed.")
 
     # 2. Download Stock & Benchmark Data
     all_symbols = tickers + [benchmark_input]
     try:
-        # IMPORTANT: On ne fait PAS de .dropna() global ici pour ne pas perdre les stocks
-        # qui ont un historique un peu plus court ou des jours fériés différents.
-        data = yf.download(all_symbols, start=start_date, end=end_date, progress=False)['Close']
+        raw_data = yf.download(all_symbols, start=start_date, end=end_date, progress=False)
         
+        # --- DATA STRUCTURE NORMALIZATION ---
+        # yfinance returns MultiIndex (Price, Ticker) sometimes. We want just 'Close'.
+        if isinstance(raw_data.columns, pd.MultiIndex):
+            data = raw_data['Close']
+        elif 'Close' in raw_data.columns:
+            data = raw_data['Close']
+        else:
+            data = raw_data # Fallback
+            
+        # --- FIX TIMEZONE ISSUES (CRITICAL) ---
+        # Force remove timezone info from the main dataframe index
+        data.index = pd.to_datetime(data.index).tz_localize(None)
+        
+        # Check if Benchmark exists
         if benchmark_input not in data.columns:
-            st.error(f"Benchmark '{benchmark_input}' not found in data.")
+            st.error(f"Benchmark '{benchmark_input}' not found in downloaded data. Columns: {list(data.columns)}")
             st.stop()
             
     except Exception as e:
         st.error(f"Data Download Error: {e}")
         st.stop()
 
-    # 3. Calculate Returns (Arithmetic)
-    # On laisse les NaN ici, on les gérera paire par paire
+    # Debug Expander (Optional, pour vérifier les données si besoin)
+    with st.expander("🔍 Debug Raw Data"):
+        st.write("Data Head:", data.head())
+        st.write("Data Types:", data.dtypes)
+
+    # 3. Calculate Returns
     returns = data.pct_change()
     
     # Separate Benchmark and Stocks
@@ -107,7 +135,7 @@ with st.spinner('Fetching Market Data & Running Regression...'):
     TRADING_DAYS = 252 
     rf_daily = rf_history_avg / TRADING_DAYS
 
-    # Prepare Benchmark Excess Return (Keep NaNs for now)
+    # Prepare Benchmark Excess Return
     market_excess_series = bench_ret - rf_daily
 
     for ticker in stock_rets.columns:
@@ -116,16 +144,14 @@ with st.spinner('Fetching Market Data & Running Regression...'):
         # Stock Excess Return
         stock_excess_series = stock_rets[ticker] - rf_daily
 
-        # --- DATA ALIGNMENT & CLEANING (The Fix) ---
-        # On combine le Benchmark et le Stock, puis on supprime les lignes 
-        # où L'UN OU L'AUTRE est manquant.
+        # --- DATA ALIGNMENT & CLEANING ---
+        # Concatenate using the clean, timezone-naive indices
         df_reg = pd.concat([market_excess_series, stock_excess_series], axis=1)
         df_reg.columns = ['Market', 'Stock']
-        df_reg = df_reg.dropna() # ICI on nettoie proprement l'intersection
+        df_reg = df_reg.dropna() # Remove any row with missing data
 
-        # Security check: Need enough data points for regression
         if len(df_reg) < 30:
-            # On passe silencieusement ou avec un warning léger
+            # Not enough overlapping data points
             continue
 
         x = df_reg['Market'].values
@@ -147,8 +173,7 @@ with st.spinner('Fetching Market Data & Running Regression...'):
         # Annualize results
         alpha_annual = alpha_daily * TRADING_DAYS
         
-        # Expected Return calculation
-        # Note: We use the mean of the CLEANED benchmark data for consistency
+        # Expected Return
         mkt_annual_ret = df_reg['Market'].mean() * TRADING_DAYS + rf_history_avg
         expected_return = rf_current + beta * (mkt_annual_ret - rf_current)
         
@@ -164,9 +189,11 @@ with st.spinner('Fetching Market Data & Running Regression...'):
             'Valuation': 'Undervalued' if alpha_annual > 0 else 'Overvalued'
         })
 
-    # --- SAFETY CHECK: IF NO DATA ---
+    # --- SAFETY CHECK ---
     if not capm_data:
-        st.error("❌ No valid data found. This usually happens if the tickers are incorrect or if the analysis period is too short for the selected assets.")
+        st.error("❌ No valid data found after alignment. Please check:")
+        st.write("- Is the 'Benchmark' ticker correct?")
+        st.write("- Do the stocks have enough history overlapping with the benchmark?")
         st.stop()
 
     df_capm = pd.DataFrame(capm_data).set_index('Ticker')
@@ -177,7 +204,6 @@ with st.spinner('Fetching Market Data & Running Regression...'):
 
     # --- KPI METRICS ---
     col1, col2, col3, col4 = st.columns(4)
-    # Recalculate global market metrics for display (using available data)
     mkt_return_ann = bench_ret.mean() * 252
     
     col1.metric("Benchmark", benchmark_input)
@@ -195,18 +221,14 @@ with st.spinner('Fetching Market Data & Running Regression...'):
         
         fig, ax = plt.subplots(figsize=(10, 6))
         
-        # X-axis range
         max_beta = df_capm['Beta'].max()
-        # Fallback if max_beta is weird
         if pd.isna(max_beta) or max_beta < 0.5: max_beta = 1.5
             
         x_range = np.linspace(0, max_beta * 1.2, 100)
-        
-        # SML Line
         y_sml = rf_current + x_range * (mkt_return_ann - rf_current)
+        
         ax.plot(x_range, y_sml, color='#555555', linestyle='--', linewidth=2, label='SML (Fair Value)', alpha=0.8)
 
-        # Plot Tickers
         colors = ['#228B22' if val == 'Undervalued' else '#D90429' for val in df_capm['Valuation']]
         
         ax.scatter(df_capm['Beta'], df_capm['Actual Return'], c=colors, s=100, zorder=5, edgecolors='white', linewidth=1)
