@@ -116,35 +116,11 @@ with st.spinner('Processing market data...'):
     # 3. AFFICHAGE DES RÉSULTATS
     # ==============================================================================
     
-    # --- SECTION 1: STRATEGIC REPORT ---
-    st.subheader("1. Allocation Report") # Titre simplifié
+    # --- SECTION 1: EFFICIENT FRONTIER (GRAPHIQUE EN PREMIER) ---
+    st.subheader("1. Efficient Frontier & Capital Allocation")
     
-    # MODIFICATION : 4 Colonnes pour insérer le "Target Return" au milieu
-    col1, col2, col3, col4 = st.columns(4)
-    
-    col1.metric("Risk-Free Asset (10Y US Bond)", f"{w_cash:.1%}")
-    col2.metric("Equity Allocation", f"{w_invest:.1%}")
-    col3.metric("Expected Return (Target)", f"{target_return:.1%}") # NOUVEAU
-    col4.metric("Est. Annual Volatility", f"{client_vol:.1%}")
-
-    st.write("#### Equity Composition")
-    df_final = pd.DataFrame({
-        "Ticker": tickers,
-        "Tangency Weight": tan_weights,
-        "Final Portfolio Weight": tan_weights * w_invest
-    }).sort_values(by="Final Portfolio Weight", ascending=False)
-    
-    df_display = df_final.copy()
-    df_display["Tangency Weight"] = df_display["Tangency Weight"].apply(lambda x: f"{x:.1%}")
-    df_display["Final Portfolio Weight"] = df_display["Final Portfolio Weight"].apply(lambda x: f"{x:.1%}")
-    st.dataframe(df_display, use_container_width=True, hide_index=True)
-
-    st.markdown("---")
-
-    # --- SECTION 2: EFFICIENT FRONTIER ---
-    st.subheader("2. Efficient Frontier & Capital Allocation")
-    
-    fig, ax = plt.subplots(figsize=(10, 6))
+    # On crée un figure plus large (width=12) pour qu'elle prenne toute la place
+    fig, ax = plt.subplots(figsize=(12, 6))
     
     # Cloud
     sc = ax.scatter(sim_vols, sim_rets, c=sim_sharpes, cmap='RdYlGn', s=3, alpha=0.5, rasterized=True)
@@ -187,7 +163,32 @@ with st.spinner('Processing market data...'):
     cbar = plt.colorbar(sc, ax=ax)
     cbar.set_label('Sharpe Ratio')
     
-    st.pyplot(fig)
+    # use_container_width=True force le graphique à prendre toute la largeur
+    st.pyplot(fig, use_container_width=True)
+
+    st.markdown("---")
+
+    # --- SECTION 2: STRATEGIC REPORT ---
+    st.subheader("2. Allocation Report")
+    
+    col1, col2, col3, col4 = st.columns(4)
+    
+    col1.metric("Risk-Free Asset (10Y US Bond)", f"{w_cash:.1%}")
+    col2.metric("Equity Allocation", f"{w_invest:.1%}")
+    col3.metric("Expected Return (Target)", f"{target_return:.1%}")
+    col4.metric("Est. Annual Volatility", f"{client_vol:.1%}")
+
+    st.write("#### Equity Composition")
+    df_final = pd.DataFrame({
+        "Ticker": tickers,
+        "Tangency Weight": tan_weights,
+        "Final Portfolio Weight": tan_weights * w_invest
+    }).sort_values(by="Final Portfolio Weight", ascending=False)
+    
+    df_display = df_final.copy()
+    df_display["Tangency Weight"] = df_display["Tangency Weight"].apply(lambda x: f"{x:.1%}")
+    df_display["Final Portfolio Weight"] = df_display["Final Portfolio Weight"].apply(lambda x: f"{x:.1%}")
+    st.dataframe(df_display, use_container_width=True, hide_index=True)
 
     st.markdown("---")
 
