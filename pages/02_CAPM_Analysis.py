@@ -9,7 +9,7 @@ import datetime
 
 # --- PAGE CONFIGURATION ---
 st.set_page_config(
-    page_title="CAPM Alpha Hunter",
+    page_title="Project Portfolio - Julien Patron",
     layout="wide"
 )
 sns.set_theme(style="white", context="paper", font_scale=1.1)
@@ -39,12 +39,12 @@ tickers = [x.strip().upper() for x in tickers_input.split(',') if x.strip()]
 benchmark_input = st.sidebar.text_input("Benchmark", value="SPY").strip().upper()
 
 # C. Time Horizon
-years_back = st.sidebar.slider("Analysis Period (Years)", min_value=1, max_value=10, value=3)
+years_back = st.sidebar.slider("Historical Data (Years)", min_value=1, max_value=10, value=3)
 
 # ==============================================================================
 # 2. DATA ENGINE
 # ==============================================================================
-st.title("CAPM Alpha Hunter")
+st.title("Equity Valuation Engine (CAPM)")
 st.markdown("Capital Asset Pricing Model Analysis: Identify undervalued securities (Jensen's Alpha).")
 st.markdown("---")
 
@@ -176,7 +176,7 @@ with st.spinner('Fetching Market Data & Running Regression...'):
     # 4. VISUALIZATION DASHBOARD
     # ==============================================================================
 
-    # --- SIDEBAR METRICS (Moved here) ---
+    # --- SIDEBAR METRICS ---
     mkt_return_ann = bench_ret.mean() * 252
     
     st.sidebar.markdown("---")

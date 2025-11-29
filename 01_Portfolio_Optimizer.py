@@ -63,7 +63,7 @@ with st.spinner('Processing market data...'):
         rf_rate = 0.04
         
     st.sidebar.markdown("---")
-    st.sidebar.metric("Risk-Free Rate (10Y US)", f"{rf_rate:.2%}")
+    st.sidebar.metric("Risk-Free Rate (10Y US Bond)", f"{rf_rate:.2%}")
 
     # Download Data
     try:
