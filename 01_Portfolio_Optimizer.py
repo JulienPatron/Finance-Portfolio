@@ -116,15 +116,67 @@ with st.spinner('Processing market data...'):
     # 3. AFFICHAGE DES RÉSULTATS
     # ==============================================================================
     
-    # --- SECTION 1: STRATEGIC REPORT ---
-    st.subheader("1. Allocation Report") # Titre simplifié
+    # --- SECTION 1: EFFICIENT FRONTIER (GRAPHIQUE EN PREMIER) ---
+    st.subheader("1. Efficient Frontier & Capital Allocation")
     
-    # MODIFICATION : 4 Colonnes pour insérer le "Target Return" au milieu
+    col_graph, col_dummy = st.columns([3, 1]) # Utilisation de colonnes pour gérer la largeur si besoin
+    
+    with col_graph:
+        fig, ax = plt.subplots(figsize=(10, 6))
+        
+        # Cloud
+        sc = ax.scatter(sim_vols, sim_rets, c=sim_sharpes, cmap='RdYlGn', s=3, alpha=0.5, rasterized=True)
+        
+        # Scale fix
+        stock_vols = np.sqrt(np.diag(cov_matrix))
+        stock_rets = mean_returns.values
+        max_stock_vol = np.max(stock_vols)
+        max_x = max(tan_vol, client_vol, max_stock_vol) * 1.15
+        
+        # CAL
+        ax.plot([0, max_x], [rf_rate, rf_rate + tan_sharpe * max_x], color='#555555', linestyle='--', linewidth=1, alpha=0.8, label='Capital Allocation Line')
+        
+        # Points
+        ax.scatter(0, rf_rate, c='black', marker='_', s=200, linewidth=2)
+        ax.text(0.002, rf_rate, f'Risk-Free ({rf_rate:.1%})', fontsize=9, fontweight='bold', va='bottom')
+
+        ax.scatter(tan_vol, tan_ret, c='#D90429', marker='+', s=150, linewidth=1.5, zorder=10)
+        ax.text(tan_vol, tan_ret+0.005, 'Tangency Portfolio', fontsize=9, fontweight='bold', color='#D90429', ha='right', va='bottom')
+
+        ax.scatter(client_vol, target_return, c='#0077B6', marker='x', s=100, linewidth=1.5, zorder=10)
+        ax.text(client_vol, target_return+0.005, f'Target ({target_return:.1%})', fontsize=9, fontweight='bold', color='#0077B6', ha='right', va='bottom')
+
+        # Stocks
+        ax.scatter(stock_vols, stock_rets, c='black', marker='x', s=50, zorder=15)
+        for i, txt in enumerate(tickers):
+            ax.text(stock_vols[i], stock_rets[i]+0.005, f' {txt}', fontsize=9, fontweight='bold', va='bottom')
+
+        # Format
+        ax.set_xlabel('Annualized Volatility (Risk)')
+        ax.set_ylabel('Annualized Return')
+        ax.xaxis.set_major_formatter(mtick.PercentFormatter(1.0, decimals=0))
+        ax.yaxis.set_major_formatter(mtick.PercentFormatter(1.0, decimals=0))
+        ax.set_xlim(0, max_x)
+        ax.set_ylim(bottom=0)
+        ax.grid(True, alpha=0.2)
+        
+        # Legend & Colorbar
+        ax.legend(loc='upper left', fontsize=8, frameon=True, framealpha=0.95, edgecolor='#E0E0E0')
+        cbar = plt.colorbar(sc, ax=ax)
+        cbar.set_label('Sharpe Ratio')
+        
+        st.pyplot(fig)
+
+    st.markdown("---")
+
+    # --- SECTION 2: STRATEGIC REPORT ---
+    st.subheader("2. Allocation Report")
+    
     col1, col2, col3, col4 = st.columns(4)
     
     col1.metric("Risk-Free Asset (10Y US Bond)", f"{w_cash:.1%}")
     col2.metric("Equity Allocation", f"{w_invest:.1%}")
-    col3.metric("Expected Return (Target)", f"{target_return:.1%}") # NOUVEAU
+    col3.metric("Expected Return (Target)", f"{target_return:.1%}")
     col4.metric("Est. Annual Volatility", f"{client_vol:.1%}")
 
     st.write("#### Equity Composition")
@@ -138,56 +190,6 @@ with st.spinner('Processing market data...'):
     df_display["Tangency Weight"] = df_display["Tangency Weight"].apply(lambda x: f"{x:.1%}")
     df_display["Final Portfolio Weight"] = df_display["Final Portfolio Weight"].apply(lambda x: f"{x:.1%}")
     st.dataframe(df_display, use_container_width=True, hide_index=True)
-
-    st.markdown("---")
-
-    # --- SECTION 2: EFFICIENT FRONTIER ---
-    st.subheader("2. Efficient Frontier & Capital Allocation")
-    
-    fig, ax = plt.subplots(figsize=(10, 6))
-    
-    # Cloud
-    sc = ax.scatter(sim_vols, sim_rets, c=sim_sharpes, cmap='RdYlGn', s=3, alpha=0.5, rasterized=True)
-    
-    # Scale fix
-    stock_vols = np.sqrt(np.diag(cov_matrix))
-    stock_rets = mean_returns.values
-    max_stock_vol = np.max(stock_vols)
-    max_x = max(tan_vol, client_vol, max_stock_vol) * 1.15
-    
-    # CAL
-    ax.plot([0, max_x], [rf_rate, rf_rate + tan_sharpe * max_x], color='#555555', linestyle='--', linewidth=1, alpha=0.8, label='Capital Allocation Line')
-    
-    # Points
-    ax.scatter(0, rf_rate, c='black', marker='_', s=200, linewidth=2)
-    ax.text(0.002, rf_rate, f'Risk-Free ({rf_rate:.1%})', fontsize=9, fontweight='bold', va='bottom')
-
-    ax.scatter(tan_vol, tan_ret, c='#D90429', marker='+', s=150, linewidth=1.5, zorder=10)
-    ax.text(tan_vol, tan_ret+0.005, 'Tangency Portfolio', fontsize=9, fontweight='bold', color='#D90429', ha='right', va='bottom')
-
-    ax.scatter(client_vol, target_return, c='#0077B6', marker='x', s=100, linewidth=1.5, zorder=10)
-    ax.text(client_vol, target_return+0.005, f'Target ({target_return:.1%})', fontsize=9, fontweight='bold', color='#0077B6', ha='right', va='bottom')
-
-    # Stocks
-    ax.scatter(stock_vols, stock_rets, c='black', marker='x', s=50, zorder=15)
-    for i, txt in enumerate(tickers):
-        ax.text(stock_vols[i], stock_rets[i]+0.005, f' {txt}', fontsize=9, fontweight='bold', va='bottom')
-
-    # Format
-    ax.set_xlabel('Annualized Volatility (Risk)')
-    ax.set_ylabel('Annualized Return')
-    ax.xaxis.set_major_formatter(mtick.PercentFormatter(1.0, decimals=0))
-    ax.yaxis.set_major_formatter(mtick.PercentFormatter(1.0, decimals=0))
-    ax.set_xlim(0, max_x)
-    ax.set_ylim(bottom=0)
-    ax.grid(True, alpha=0.2)
-    
-    # Legend & Colorbar
-    ax.legend(loc='upper left', fontsize=8, frameon=True, framealpha=0.95, edgecolor='#E0E0E0')
-    cbar = plt.colorbar(sc, ax=ax)
-    cbar.set_label('Sharpe Ratio')
-    
-    st.pyplot(fig)
 
     st.markdown("---")
 
