@@ -22,7 +22,7 @@ movie_page = st.Page(
 pg = st.navigation(
     {
         "Finance": [portfolio_page],
-        "Other(s)": [movie_page],
+        "Other": [movie_page],
     }
 )
 
