@@ -33,7 +33,6 @@ st.markdown("""
 # 2. DATA LOADING & API
 # ==============================================================================
 
-# Secure API Key retrieval
 try:
     TMDB_API_KEY = st.secrets["TMDB_API_KEY"]
 except FileNotFoundError:
@@ -70,7 +69,6 @@ def fetch_movie_details(tmdb_id):
     if pd.isna(tmdb_id):
         return None
     
-    # Changed language to en-US for English content
     url = f"https://api.themoviedb.org/3/movie/{int(tmdb_id)}?api_key={TMDB_API_KEY}&language=en-US"
     try:
         response = requests.get(url, timeout=1.5)
@@ -94,6 +92,7 @@ if 'selected_movie_name' not in st.session_state:
     st.session_state['selected_movie_name'] = None
 
 def set_movie(movie_title):
+    """Callback function to update session state"""
     st.session_state['selected_movie_name'] = movie_title
 
 # ==============================================================================
@@ -121,6 +120,7 @@ start_analysis = st.button("Start Analysis", type="primary")
 # 5. RECOMMENDATION ENGINE & DISPLAY
 # ==============================================================================
 
+# Logic: Display if button clicked OR if a movie is already in memory (Rabbit hole)
 if selected_movie and (start_analysis or st.session_state['selected_movie_name']):
     
     # 1. Get Selected Movie Info
@@ -151,7 +151,7 @@ if selected_movie and (start_analysis or st.session_state['selected_movie_name']
             st.caption(f"Year: {date_sortie} | TMDB Rating: {note}/10")
             st.write(f"**Synopsis:** {overview}")
     
-    # --- SECTION TITLE (Moved outside columns) ---
+    # --- SECTION TITLE ---
     st.write("") 
     st.subheader("Recommended Movies:")
     st.write("") 
@@ -163,7 +163,7 @@ if selected_movie and (start_analysis or st.session_state['selected_movie_name']
     cols = st.columns(5)
     
     for i, col in enumerate(cols):
-        neighbor_idx = indices.flatten()[i+1] # Skip the first one (itself)
+        neighbor_idx = indices.flatten()[i+1]
         distance = distances.flatten()[i+1]
         similarity = 1 - distance
         
@@ -192,10 +192,13 @@ if selected_movie and (start_analysis or st.session_state['selected_movie_name']
                 st.progress(int(similarity * 100))
                 st.caption(f"Match: {int(similarity * 100)}%")
                 
-                # Exploration Button
-                if st.button("Search this movie", key=f"btn_{neighbor_idx}"):
-                    set_movie(neighbor_title)
-                    st.rerun()
+                # Exploration Button (CORRIGÉ AVEC ON_CLICK)
+                st.button(
+                    "Search this movie", 
+                    key=f"btn_{neighbor_idx}", 
+                    on_click=set_movie, 
+                    args=(neighbor_title,)
+                )
 
 elif not selected_movie:
     st.info("Select a movie from the menu or type a title to start exploring.")
