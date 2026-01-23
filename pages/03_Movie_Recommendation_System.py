@@ -8,7 +8,6 @@ import gzip
 # --- CONFIGURATION DE LA PAGE ---
 st.set_page_config(
     page_title="Ciné Match - AI Engine",
-    page_icon="🎬",
     layout="wide"
 )
 
@@ -29,27 +28,6 @@ st.markdown("""
     }
 </style>
 """, unsafe_allow_html=True)
-
-# ==============================================================================
-# 1. SIDEBAR (DOCUMENTATION TECHNIQUE)
-# ==============================================================================
-with st.sidebar:
-    st.header("⚙️ Architecture Technique")
-    st.info(
-        """
-        **1. Filtrage (ETL) :** Dataset MovieLens 32M réduit aux films > 1000 votes pour éliminer le bruit.
-        
-        **2. Vectorisation :** Création d'une **Matrice Creuse (Sparse Matrix)** User-Item pour optimiser la RAM (compression 99%).
-        
-        **3. Modèle IA :** Algorithme **KNN (K-Nearest Neighbors)** utilisant la distance Cosinus (focalisation sur le profil de goût, pas la popularité).
-        
-        **4. Inference :** Temps réel (< 50ms) grâce à l'indexation pré-calculée.
-        """
-    )
-    
-    st.markdown("---")
-    st.write("👨‍💻 **Auteur :** Julien Patron")
-    st.caption("Projet Portfolio Data Science")
 
 # ==============================================================================
 # 2. CHARGEMENT DES DONNÉES & API
@@ -123,8 +101,8 @@ def set_movie(movie_title):
 # 4. INTERFACE PRINCIPALE
 # ==============================================================================
 
-st.title("🎬 Algorithmic Movie Recommender")
-st.markdown("Découvrez des films basés sur la similarité vectorielle des goûts utilisateurs.")
+st.title("Movie Recommendation System")
+st.markdown("From MovieLens 32M Dataset")
 
 # --- BARRE DE RECHERCHE INTELLIGENTE ---
 # On cherche l'index du film stocké en session (s'il existe) pour pré-remplir la box
@@ -167,16 +145,16 @@ if selected_movie and (start_analysis or st.session_state['selected_movie_name']
             st.image("https://via.placeholder.com/300x450?text=No+Image", use_container_width=True)
             
     with col_hero_txt:
-        st.subheader(f"🎯 Analyse de : {selected_movie}")
+        st.subheader(f"{selected_movie}")
         if source_details:
             date_sortie = source_details.get('release_date', 'Inconnue')[:4]
             note = round(source_details.get('vote_average', 0), 1)
             overview = source_details.get('overview', 'Pas de résumé disponible.')
             
-            st.caption(f"📅 Année : {date_sortie} | ⭐ Note TMDB : {note}/10")
+            st.caption(f"Année : {date_sortie} | Note TMDB : {note}/10")
             st.write(f"**Synopsis :** {overview}")
         
-        st.markdown("### 🧬 Films vectoriellement proches :")
+        st.markdown("### Films recommandés :")
 
     # 2. CALCUL KNN
     distances, indices = model.kneighbors(matrix[matrice_id], n_neighbors=6)
@@ -219,7 +197,7 @@ if selected_movie and (start_analysis or st.session_state['selected_movie_name']
                 
                 # BOUTON RABBIT HOLE 🐰
                 # Si on clique, on met à jour le session_state et on recharge
-                if st.button("🔍 Explorer", key=f"btn_{neighbor_idx}"):
+                if st.button("Search this movie", key=f"btn_{neighbor_idx}"):
                     set_movie(neighbor_title)
                     st.rerun()
 
