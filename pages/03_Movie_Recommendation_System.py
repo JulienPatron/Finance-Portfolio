@@ -7,12 +7,8 @@ st.set_page_config(page_title="Project Portfolio", layout="wide")
 st.markdown("""
 <style>
     .block-container {padding-top: 1rem;}
-    /* On garde le style pour l'arrondi et le gras, mais la largeur sera gérée par Python */
-    div.stButton > button:first-child {
-        border-radius: 8px; 
-        font-weight: bold; 
-        border: 1px solid #ddd;
-    }
+    /* Le bouton prend 100% de la largeur, ce qui le centre visuellement */
+    div.stButton > button:first-child {width: 100%; border-radius: 5px; font-weight: bold;}
 </style>
 """, unsafe_allow_html=True)
 
@@ -113,27 +109,27 @@ if selected and (go_btn or st.session_state['movie']):
             st.progress(match)
             
             # --- BLOC TEXTE AJUSTÉ ---
-            # margin-top: 0px -> Colle le "Match" juste sous la barre
-            # margin-top: 5px (sur la 2e div) -> Éloigne le Rating du Match
+            # margin-top: -10px -> Remonte le texte vers la barre bleue
+            # margin-top: 8px dans la div suivante -> Éloigne le Rating du Match
             st.markdown(f"""
-            <div style="text-align: center; font-size: 14px; color: #555;">
-                <div style="margin-top: 0px; margin-bottom: 0px;">Match: {match}%</div>
-                <div style="margin-top: 6px; font-size: 13px; color: #777;">⭐ {n_info['rating']}</div>
+            <div style="text-align: center; margin-top: -10px; font-size: 14px; color: #555;">
+                Match: {match}%
+                <div style="margin-top: 8px; font-size: 13px; color: #777;">
+                    ⭐ TMDB Rating: {n_info['rating']}
+                </div>
             </div>
             """, unsafe_allow_html=True)
 
-            # --- LOGOS STREAMING ---
+            # --- BLOC LOGOS AJUSTÉ ---
+            # margin-top & bottom: 12px -> Crée un espace homogène autour des logos
             logos_html = ""
             if n_info and n_info['streaming']:
                 logos_html = "".join([f'<img src="{p["logo"]}" style="width:35px; margin: 0 4px; border-radius:5px;" title="{p["name"]}">' for p in n_info['streaming']])
             
-            # margin-top: 10px -> Éloigne les logos du Rating
             st.markdown(f"""
-            <div style="height: 45px; display: flex; align-items: center; justify-content: center; margin-top: 10px; margin-bottom: 5px;">
+            <div style="height: 45px; margin-top: 12px; margin-bottom: 12px; display: flex; align-items: center; justify-content: center;">
                 {logos_html}
             </div>
             """, unsafe_allow_html=True)
 
-            # --- BOUTON CENTRÉ ---
-            # use_container_width=True -> Force le bouton à prendre toute la largeur (donc centré)
-            st.button("Search this movie", key=f"btn_{neighbor_id}", on_click=update_selection, args=(neighbor_title,), use_container_width=True)
+            st.button("Search this movie", key=f"btn_{neighbor_id}", on_click=update_selection, args=(neighbor_title,))
