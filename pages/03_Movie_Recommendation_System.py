@@ -121,6 +121,6 @@ if selected and (go_btn or st.session_state['movie']):
             if n_info and n_info['streaming']:
                 logos_html = "".join([f'<img src="{p["logo"]}" style="width:35px; margin-right:5px; border-radius:5px;" title="{p["name"]}">' for p in n_info['streaming']])
             
-            st.markdown(f'<div style="height: 40px; margin-bottom: 5px; display: flex; align-items: center;">{logos_html}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div style="height: 50px; margin-bottom: 5px; display: flex; align-items: center;">{logos_html}</div>', unsafe_allow_html=True)
             
             st.button("Search this movie", key=f"btn_{neighbor_id}", on_click=update_selection, args=(neighbor_title,))
