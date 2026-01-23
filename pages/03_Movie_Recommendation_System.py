@@ -240,8 +240,8 @@ if selected_movie and (start_analysis or st.session_state['selected_movie_name']
                 <div style="
                     height: 50px; 
                     display: flex; 
-                    align-items: center; 
-                    justify-content: center; 
+                    align-items: left; 
+                    justify-content: left; 
                     text-align: left; 
                     font-weight: bold; 
                     font-size: 14px;
