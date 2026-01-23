@@ -5,13 +5,13 @@ import requests
 import os
 import gzip
 
-# --- CONFIGURATION DE LA PAGE ---
+# --- PAGE CONFIGURATION ---
 st.set_page_config(
-    page_title="Ciné Match - AI Engine",
+    page_title="Project Portfolio - Julien Patron",
     layout="wide"
 )
 
-# --- CSS PERSONNALISÉ (Style Pro) ---
+# --- CUSTOM CSS ---
 st.markdown("""
 <style>
     .block-container {padding-top: 1rem;}
@@ -30,19 +30,19 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==============================================================================
-# 2. CHARGEMENT DES DONNÉES & API
+# 2. DATA LOADING & API
 # ==============================================================================
 
-# Récupération sécurisée de la clé API
+# Secure API Key retrieval
 try:
     TMDB_API_KEY = st.secrets["TMDB_API_KEY"]
 except FileNotFoundError:
-    st.error("⚠️ Erreur : Fichier .streamlit/secrets.toml introuvable.")
+    st.error("Error: File .streamlit/secrets.toml not found.")
     st.stop()
 
 @st.cache_resource
 def load_engine():
-    """Charge le modèle et la matrice depuis les fichiers compressés (.gz)."""
+    """Loads model and matrix from compressed files (.gz)."""
     paths = {
         "model": "modele_knn.pkl.gz",     
         "matrix": "matrice_sparse.pkl.gz", 
@@ -60,17 +60,18 @@ def load_engine():
         df = pd.read_csv(paths["data"])
         return model, matrix, df
     except Exception as e:
-        st.error(f"Erreur de chargement : {e}")
+        st.error(f"Loading error: {e}")
         return None, None, None
 
 def fetch_movie_details(tmdb_id):
     """
-    Récupère les détails complets (Affiche, Synopsis, Date, Note) via TMDB.
+    Fetches details (Poster, Overview, Date, Rating) via TMDB in English.
     """
     if pd.isna(tmdb_id):
         return None
     
-    url = f"https://api.themoviedb.org/3/movie/{int(tmdb_id)}?api_key={TMDB_API_KEY}&language=fr-FR"
+    # Changed language to en-US for English content
+    url = f"https://api.themoviedb.org/3/movie/{int(tmdb_id)}?api_key={TMDB_API_KEY}&language=en-US"
     try:
         response = requests.get(url, timeout=1.5)
         if response.status_code == 200:
@@ -79,54 +80,50 @@ def fetch_movie_details(tmdb_id):
         pass
     return None
 
-# Chargement du moteur
+# Load Engine
 model, matrix, df_movies = load_engine()
 
 if model is None:
     st.stop()
 
 # ==============================================================================
-# 3. GESTION DU "RABBIT HOLE" (Session State)
+# 3. RABBIT HOLE MANAGEMENT (Session State)
 # ==============================================================================
 
-# Si on n'a pas encore de film sélectionné en mémoire, on initialise
 if 'selected_movie_name' not in st.session_state:
     st.session_state['selected_movie_name'] = None
 
-# Fonction pour mettre à jour la sélection quand on clique sur "Explorer"
 def set_movie(movie_title):
     st.session_state['selected_movie_name'] = movie_title
 
 # ==============================================================================
-# 4. INTERFACE PRINCIPALE
+# 4. MAIN INTERFACE
 # ==============================================================================
 
 st.title("Movie Recommendation System")
 st.markdown("From MovieLens 32M Dataset")
 
-# --- BARRE DE RECHERCHE INTELLIGENTE ---
-# On cherche l'index du film stocké en session (s'il existe) pour pré-remplir la box
+# --- INTELLIGENT SEARCH BAR ---
 index_to_select = None
 if st.session_state['selected_movie_name'] in df_movies['title'].values:
     index_to_select = int(df_movies[df_movies['title'] == st.session_state['selected_movie_name']].index[0])
 
 selected_movie = st.selectbox(
-    "🔍 Recherchez un film de référence :",
+    "Select a reference movie:",
     df_movies['title'].values,
     index=index_to_select,
-    placeholder="Tapez un titre (ex: Inception)...",
+    placeholder="Type a title (e.g. Inception)...",
 )
 
-# Bouton d'action (ou auto-run si un film est sélectionné via le Rabbit Hole)
-start_analysis = st.button("Lancer l'analyse", type="primary")
+start_analysis = st.button("Start Analysis", type="primary")
 
 # ==============================================================================
-# 5. MOTEUR DE RECOMMANDATION & AFFICHAGE
+# 5. RECOMMENDATION ENGINE & DISPLAY
 # ==============================================================================
 
 if selected_movie and (start_analysis or st.session_state['selected_movie_name']):
     
-    # 1. Récupération des infos du film sélectionné (HERO SECTION)
+    # 1. Get Selected Movie Info
     idx = df_movies[df_movies['title'] == selected_movie].index[0]
     tmdb_id_source = df_movies.iloc[idx]['tmdbId']
     matrice_id = df_movies.iloc[idx]['matrice_id']
@@ -135,7 +132,7 @@ if selected_movie and (start_analysis or st.session_state['selected_movie_name']
     
     st.divider()
     
-    # --- HERO SECTION (Le film choisi) ---
+    # --- HERO SECTION ---
     col_hero_img, col_hero_txt = st.columns([1, 3])
     
     with col_hero_img:
@@ -147,29 +144,29 @@ if selected_movie and (start_analysis or st.session_state['selected_movie_name']
     with col_hero_txt:
         st.subheader(f"{selected_movie}")
         if source_details:
-            date_sortie = source_details.get('release_date', 'Inconnue')[:4]
+            date_sortie = source_details.get('release_date', 'Unknown')[:4]
             note = round(source_details.get('vote_average', 0), 1)
-            overview = source_details.get('overview', 'Pas de résumé disponible.')
+            overview = source_details.get('overview', 'No overview available.')
             
-            st.caption(f"Année : {date_sortie} | Note TMDB : {note}/10")
-            st.write(f"**Synopsis :** {overview}")
-        
-        st.markdown("### Films recommandés :")
+            st.caption(f"Year: {date_sortie} | TMDB Rating: {note}/10")
+            st.write(f"**Synopsis:** {overview}")
+    
+    # --- SECTION TITLE (Moved outside columns) ---
+    st.write("") 
+    st.subheader("Recommended Movies:")
+    st.write("") 
 
-    # 2. CALCUL KNN
+    # 2. KNN CALCULATION
     distances, indices = model.kneighbors(matrix[matrice_id], n_neighbors=6)
     
-    # 3. AFFICHAGE DES RÉSULTATS (GRID)
-    st.write("") # Petit espace
+    # 3. RESULTS GRID
     cols = st.columns(5)
     
-    # On boucle sur les 5 voisins (on ignore le premier qui est le film lui-même)
     for i, col in enumerate(cols):
-        neighbor_idx = indices.flatten()[i+1] # i+1 pour sauter le film source
+        neighbor_idx = indices.flatten()[i+1] # Skip the first one (itself)
         distance = distances.flatten()[i+1]
-        similarity = 1 - distance # Conversion Distance -> Similarité
+        similarity = 1 - distance
         
-        # Récupération des data du voisin
         match = df_movies[df_movies['matrice_id'] == neighbor_idx]
         
         if not match.empty:
@@ -178,28 +175,27 @@ if selected_movie and (start_analysis or st.session_state['selected_movie_name']
             neighbor_details = fetch_movie_details(neighbor_data['tmdbId'])
             
             with col:
-                # Affiche Image
+                # Poster
                 if neighbor_details and neighbor_details.get('poster_path'):
                     st.image(f"https://image.tmdb.org/t/p/w500{neighbor_details['poster_path']}", use_container_width=True)
                 else:
                     st.image("https://via.placeholder.com/300x450?text=No+Image", use_container_width=True)
                 
-                # Titre & Année
+                # Title & Year
                 year = "????"
                 if neighbor_details and neighbor_details.get('release_date'):
                     year = neighbor_details.get('release_date')[:4]
                 
                 st.markdown(f"**{neighbor_title}** ({year})")
                 
-                # Jauge de similarité
+                # Similarity Bar
                 st.progress(int(similarity * 100))
-                st.caption(f"Match : {int(similarity * 100)}%")
+                st.caption(f"Match: {int(similarity * 100)}%")
                 
-                # BOUTON RABBIT HOLE 🐰
-                # Si on clique, on met à jour le session_state et on recharge
+                # Exploration Button
                 if st.button("Search this movie", key=f"btn_{neighbor_idx}"):
                     set_movie(neighbor_title)
                     st.rerun()
 
 elif not selected_movie:
-    st.info("👈 Sélectionnez un film dans le menu ou tapez un titre pour commencer l'exploration.")
+    st.info("Select a movie from the menu or type a title to start exploring.")
