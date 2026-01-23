@@ -152,7 +152,7 @@ selected_movie = st.selectbox(
     placeholder="Type a title (e.g. Inception)...",
 )
 
-start_analysis = st.button("Start Analysis", type="primary")
+start_analysis = st.button("Start", type="primary")
 
 # ==============================================================================
 # 5. RECOMMENDATION ENGINE & DISPLAY
@@ -276,6 +276,3 @@ if selected_movie and (start_analysis or st.session_state['selected_movie_name']
                     on_click=set_movie, 
                     args=(neighbor_title,)
                 )
-
-elif not selected_movie:
-    st.info("Select a movie from the menu or type a title to start exploring.")
