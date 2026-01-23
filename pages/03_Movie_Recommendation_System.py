@@ -59,11 +59,11 @@ if 'movie' not in st.session_state: st.session_state['movie'] = None
 def update_selection(title): st.session_state['movie'] = title
 
 st.title("Movie Recommendation System")
-st.markdown("Item-based filtering using user ratings from the MovieLens 32M dataset | Movie data from TMDB")
+st.markdown("Item-based filtering using user ratings from the MovieLens 32M dataset | Movie data from TMDB | Up to: 2023")
 
 # Barre de recherche intelligente
 idx = int(df[df['title'] == st.session_state['movie']].index[0]) if st.session_state['movie'] in df['title'].values else None
-selected = st.selectbox("Select a reference movie:", df['title'].values, index=idx, placeholder="Type a title...")
+selected = st.selectbox("Select a reference movie:", df['title'].values, index=idx, placeholder="Type a title (e.g. Inception)")
 go_btn = st.button("Start", type="primary")
 
 # 5. MOTEUR DE RECOMMANDATION
@@ -84,7 +84,7 @@ if selected and (go_btn or st.session_state['movie']):
         st.write(f"**Synopsis:** {info['overview']}")
         
         if info['streaming']:
-            st.markdown("**Available on:**")
+            st.markdown("**Available on (FR):**")
             st.markdown("".join([f'<img src="{p["logo"]}" style="width:50px; margin-right:10px; border-radius:8px;" title="{p["name"]}">' for p in info['streaming']]), unsafe_allow_html=True)
 
     # Recommandations (KNN)
