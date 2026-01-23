@@ -1,275 +1,125 @@
 import streamlit as st
 import pandas as pd
-import pickle
-import requests
-import os
-import gzip
+import pickle, requests, os, gzip
 
-# --- PAGE CONFIGURATION ---
-st.set_page_config(
-    page_title="Project Portfolio - Julien Patron",
-    layout="wide"
-)
-
-# --- CUSTOM CSS ---
+# 1. CONFIGURATION & STYLE
+st.set_page_config(page_title="Project Portfolio", layout="wide")
 st.markdown("""
 <style>
     .block-container {padding-top: 1rem;}
-    div.stButton > button:first-child {
-        width: 100%;
-        border-radius: 5px;
-        font-weight: bold;
-    }
-    .movie-card {
-        background-color: #f0f2f6;
-        padding: 10px;
-        border-radius: 10px;
-        text-align: center;
-    }
+    div.stButton > button:first-child {width: 100%; border-radius: 5px; font-weight: bold;}
 </style>
 """, unsafe_allow_html=True)
 
-# ==============================================================================
-# 2. DATA LOADING & API
-# ==============================================================================
-
-try:
-    TMDB_API_KEY = st.secrets["TMDB_API_KEY"]
-except FileNotFoundError:
-    st.error("Error: File .streamlit/secrets.toml not found.")
-    st.stop()
-
+# 2. CHARGEMENT DES DONNÉES
 @st.cache_resource
-def load_engine():
-    """Loads model and matrix from compressed files (.gz)."""
-    paths = {
-        "model": "modele_knn.pkl.gz",     
-        "matrix": "matrice_sparse.pkl.gz", 
-        "data": "liste_films_final.csv"
-    }
-    
-    if not os.path.exists(paths["data"]):
-        paths = {k: f"../{v}" for k, v in paths.items()}
-
+def load_data():
     try:
-        with gzip.open(paths["model"], 'rb') as f:
-            model = pickle.load(f)
-        with gzip.open(paths["matrix"], 'rb') as f:
-            matrix = pickle.load(f)
-        df = pd.read_csv(paths["data"])
-        return model, matrix, df
-    except Exception as e:
-        st.error(f"Loading error: {e}")
-        return None, None, None
+        # Chemins des fichiers (local ou dossier parent)
+        files = {"model": "modele_knn.pkl.gz", "matrix": "matrice_sparse.pkl.gz", "db": "liste_films_final.csv"}
+        if not os.path.exists(files["db"]): 
+            files = {k: f"../{v}" for k, v in files.items()}
 
-def fetch_movie_details(tmdb_id):
-    """
-    Fetches details + Watch Providers via TMDB (Version FR).
-    """
-    if pd.isna(tmdb_id):
-        return None
-    
-    # On garde l'anglais pour le texte (synopsis), mais on veut les infos de streaming...
-    # Note: L'API renvoie les providers liés à la région demandée plus bas, pas la langue.
-    url = f"https://api.themoviedb.org/3/movie/{int(tmdb_id)}?api_key={TMDB_API_KEY}&language=en-US&append_to_response=watch/providers"
+        with gzip.open(files["model"], 'rb') as f: model = pickle.load(f)
+        with gzip.open(files["matrix"], 'rb') as f: matrix = pickle.load(f)
+        return model, matrix, pd.read_csv(files["db"])
+    except: return None, None, None
+
+model, matrix, df = load_data()
+if model is None: st.stop()
+
+# 3. FONCTION API TMDB (Simplifiée)
+def get_details(tmdb_id):
+    if pd.isna(tmdb_id): return None
+    api_key = st.secrets["TMDB_API_KEY"]
+    url = f"https://api.themoviedb.org/3/movie/{int(tmdb_id)}?api_key={api_key}&language=en-US&append_to_response=watch/providers"
     
     try:
-        response = requests.get(url, timeout=1.5)
-        if response.status_code == 200:
-            data = response.json()
-            
-            # --- 1. TRAITEMENT CLASSIQUE ---
-            genres_list = [g['name'] for g in data.get('genres', [])]
-            genres_str = ", ".join(genres_list[:3])
-            
-            runtime_min = data.get('runtime', 0)
-            runtime_str = f"{runtime_min // 60}h {runtime_min % 60:02d}m" if runtime_min else "N/A"
+        data = requests.get(url, timeout=1).json()
+        
+        # Récupération Streaming FR
+        providers = data.get('watch/providers', {}).get('results', {}).get('FR', {}).get('flatrate', [])[:3]
+        logos = [{"logo": f"https://image.tmdb.org/t/p/original{p['logo_path']}", "name": p['provider_name']} for p in providers]
 
-            # --- 2. TRAITEMENT STREAMING (CORRECTION FR 🇫🇷) ---
-            # On change 'US' par 'FR' ici !
-            providers = data.get('watch/providers', {}).get('results', {}).get('FR', {})
-            
-            # On cherche les plateformes de streaming "Flatrate" (Abonnement)
-            flatrate = providers.get('flatrate', [])
-            
-            streaming_list = []
-            for p in flatrate[:3]:
-                streaming_list.append({
-                    "name": p['provider_name'],
-                    "logo": f"https://image.tmdb.org/t/p/original{p['logo_path']}"
-                })
+        return {
+            "poster": f"https://image.tmdb.org/t/p/w500{data.get('poster_path')}" if data.get('poster_path') else "https://via.placeholder.com/300x450?text=No+Image",
+            "title": data.get('title'),
+            "overview": data.get('overview', 'No synopsis.'),
+            "year": data.get('release_date', '????')[:4],
+            "rating": round(data.get('vote_average', 0), 1),
+            "genres": ", ".join([g['name'] for g in data.get('genres', [])][:3]),
+            "runtime": f"{data.get('runtime', 0)//60}h {data.get('runtime', 0)%60:02d}m",
+            "streaming": logos
+        }
+    except: return None
 
-            return {
-                "poster_path": data.get("poster_path"),
-                "backdrop_path": data.get("backdrop_path"),
-                "title": data.get("title"),
-                "overview": data.get("overview", "No overview available."),
-                "release_year": data.get("release_date", "Unknown")[:4],
-                "rating": round(data.get("vote_average", 0), 1),
-                "genres": genres_str,
-                "runtime": runtime_str,
-                "streaming": streaming_list
-            }
-    except Exception as e:
-        pass
-    return None
+# 4. INTERFACE & NAVIGATION
+if 'movie' not in st.session_state: st.session_state['movie'] = None
 
-# Load Engine
-model, matrix, df_movies = load_engine()
-
-if model is None:
-    st.stop()
-
-# ==============================================================================
-# 3. RABBIT HOLE MANAGEMENT (Session State)
-# ==============================================================================
-
-if 'selected_movie_name' not in st.session_state:
-    st.session_state['selected_movie_name'] = None
-
-def set_movie(movie_title):
-    """Callback function to update session state"""
-    st.session_state['selected_movie_name'] = movie_title
-
-# ==============================================================================
-# 4. MAIN INTERFACE
-# ==============================================================================
+def update_selection(title): st.session_state['movie'] = title
 
 st.title("Movie Recommendation System")
+st.markdown("Item-based filtering using user ratings from the MovieLens 32M dataset | Movie data from TMDB")
 
-# La phrase dynamique demandée :
-st.markdown("Item-based filtering using user ratings from the MovieLens 32M dataset | Movie data from TMDB | Period: 1902 - 2023")
+# Barre de recherche intelligente
+idx = int(df[df['title'] == st.session_state['movie']].index[0]) if st.session_state['movie'] in df['title'].values else None
+selected = st.selectbox("Select a reference movie:", df['title'].values, index=idx, placeholder="Type a title...")
+go_btn = st.button("Start", type="primary")
 
-# --- INTELLIGENT SEARCH BAR ---
-index_to_select = None
-if st.session_state['selected_movie_name'] in df_movies['title'].values:
-    index_to_select = int(df_movies[df_movies['title'] == st.session_state['selected_movie_name']].index[0])
-
-selected_movie = st.selectbox(
-    "Select a reference movie:",
-    df_movies['title'].values,
-    index=index_to_select,
-    placeholder="Type a title (e.g. Inception)...",
-)
-
-start_analysis = st.button("Start", type="primary")
-
-# ==============================================================================
-# 5. RECOMMENDATION ENGINE & DISPLAY
-# ==============================================================================
-
-# Logic: Display if button clicked OR if a movie is already in memory (Rabbit hole)
-if selected_movie and (start_analysis or st.session_state['selected_movie_name']):
-    
-    # 1. Get Selected Movie Info
-    idx = df_movies[df_movies['title'] == selected_movie].index[0]
-    tmdb_id_source = df_movies.iloc[idx]['tmdbId']
-    matrice_id = df_movies.iloc[idx]['matrice_id']
-    
-    source_details = fetch_movie_details(tmdb_id_source)
+# 5. MOTEUR DE RECOMMANDATION
+if selected and (go_btn or st.session_state['movie']):
+    # Infos du film sélectionné
+    row = df[df['title'] == selected].iloc[0]
+    info = get_details(row['tmdbId'])
     
     st.divider()
     
-    # --- HERO SECTION ---
-    col_hero_img, col_hero_txt = st.columns([1, 3])
-    
-    with col_hero_img:
-        if source_details and source_details.get('poster_path'):
-            st.image(f"https://image.tmdb.org/t/p/w500{source_details['poster_path']}", use_container_width=True)
-        else:
-            st.image("https://via.placeholder.com/300x450?text=No+Image", use_container_width=True)
-            
-    with col_hero_txt:
-        st.subheader(f"{selected_movie}")
+    # Hero Section
+    c1, c2 = st.columns([1, 3])
+    with c1: st.image(info['poster'], use_container_width=True)
+    with c2:
+        st.subheader(selected)
+        st.caption(f"Year: {info['year']} | Runtime: {info['runtime']} | Genres: {info['genres']}")
+        st.write(f"**TMDB Rating:** {info['rating']}/10")
+        st.write(f"**Synopsis:** {info['overview']}")
         
-        if source_details:         
-            # Metadata Line
-            st.caption(f"Year: {source_details['release_year']} | Runtime: {source_details['runtime']} | Genres: {source_details['genres']}")
-            
-            # Rating
-            st.write(f"**TMDB Rating:** {source_details['rating']}/10")
-            
-            # Synopsis
-            st.write(f"**Synopsis:** {source_details['overview']}")
-            
-            # Streaming Availability (Hero Section)
-            if source_details.get('streaming'):
-                st.write("")
-                st.markdown("**Available on:**")
-                logos_html = ""
-                for p in source_details['streaming']:
-                    logos_html += f'<img src="{p["logo"]}" style="width:60px; margin-right:10px; border-radius:8px;" title="{p["name"]}">'
-                st.markdown(logos_html, unsafe_allow_html=True)
+        if info['streaming']:
+            st.markdown("**Available on:**")
+            st.markdown("".join([f'<img src="{p["logo"]}" style="width:50px; margin-right:10px; border-radius:8px;" title="{p["name"]}">' for p in info['streaming']]), unsafe_allow_html=True)
 
-    # --- SECTION TITLE ---
-    st.write("") 
+    # Recommandations (KNN)
     st.subheader("Recommended Movies:")
-    st.write("") 
-
-    # 2. KNN CALCULATION
-    distances, indices = model.kneighbors(matrix[matrice_id], n_neighbors=6)
-
-    # 3. RESULTS GRID
+    distances, indices = model.kneighbors(matrix[row['matrice_id']], n_neighbors=6)
     cols = st.columns(5)
     
     for i, col in enumerate(cols):
-        neighbor_idx = indices.flatten()[i+1] # Skip self
-        distance = distances.flatten()[i+1]
-        similarity = 1 - distance
+        neighbor_id = indices.flatten()[i+1]
+        neighbor_row = df[df['matrice_id'] == neighbor_id].iloc[0]
+        # Important: On prend le titre du CSV pour éviter le bug des années en double
+        neighbor_title = neighbor_row['title'] 
         
-        match = df_movies[df_movies['matrice_id'] == neighbor_idx]
+        # Appel API pour l'image
+        n_info = get_details(neighbor_row['tmdbId'])
         
-        if not match.empty:
-            neighbor_data = match.iloc[0]
-            # On prend directement le titre du CSV qui contient déjà l'année (ex: "Inception (2010)")
-            neighbor_title = neighbor_data['title']
+        with col:
+            st.image(n_info['poster'], use_container_width=True)
             
-            # On appelle l'API juste pour l'image et le streaming
-            neighbor_details = fetch_movie_details(neighbor_data['tmdbId'])
+            # Titre à hauteur fixe (HTML)
+            st.markdown(f"""
+            <div style="height: 50px; display: flex; align-items: center; justify-content: center; text-align: center; font-weight: bold; font-size: 14px; margin-bottom: 5px; line-height: 1.2; overflow: hidden; text-overflow: ellipsis;">
+                {neighbor_title}
+            </div>
+            """, unsafe_allow_html=True)
             
-            with col:
-                # Poster
-                if neighbor_details and neighbor_details.get('poster_path'):
-                    st.image(f"https://image.tmdb.org/t/p/w500{neighbor_details['poster_path']}", use_container_width=True)
-                else:
-                    st.image("https://via.placeholder.com/300x450?text=No+Image", use_container_width=True)
-                
-                # Titre (Correction : On affiche juste le titre CSV, sans rajouter l'année)
-                title_html = f"""
-                <div style="
-                    height: 50px; 
-                    display: flex; 
-                    align-items: center; 
-                    justify-content: center; 
-                    text-align: center; 
-                    font-weight: bold; 
-                    font-size: 14px;
-                    margin-bottom: 5px;
-                    line-height: 1.2;
-                    overflow: hidden;
-                    text-overflow: ellipsis;
-                ">
-                    {neighbor_title}
-                </div>
-                """
-                st.markdown(title_html, unsafe_allow_html=True)
-                
-                # Similarity Bar
-                st.progress(int(similarity * 100))
-                st.caption(f"Match: {int(similarity * 100)}%")
-                
-                # Streaming Logos
-                if neighbor_details and neighbor_details.get('streaming'):
-                    logos_html = ""
-                    for p in neighbor_details['streaming']:
-                        logos_html += f'<img src="{p["logo"]}" style="width:35px; margin-right:5px; border-radius:5px;" title="{p["name"]}">'
-                    st.markdown(logos_html, unsafe_allow_html=True)
-                    st.write("") # Spacer
+            # Barre de match
+            match = int((1 - distances.flatten()[i+1]) * 100)
+            st.progress(match)
+            st.caption(f"Match: {match}%")
+            
+            # Logos Streaming (Version mini)
+            if n_info and n_info['streaming']:
+                st.markdown("".join([f'<img src="{p["logo"]}" style="width:35px; margin-right:5px; border-radius:5px;" title="{p["name"]}">' for p in n_info['streaming']]), unsafe_allow_html=True)
+                st.write("")
 
-                # Exploration Button
-                st.button(
-                    "Search this movie", 
-                    key=f"btn_{neighbor_idx}", 
-                    on_click=set_movie, 
-                    args=(neighbor_title,)
-                )
+            # Bouton Explorer (Callback)
+            st.button("Search this movie", key=f"btn_{neighbor_id}", on_click=update_selection, args=(neighbor_title,))
