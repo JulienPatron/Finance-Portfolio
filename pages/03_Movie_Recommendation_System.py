@@ -64,17 +64,55 @@ def load_engine():
 
 def fetch_movie_details(tmdb_id):
     """
-    Fetches details (Poster, Overview, Date, Rating) via TMDB in English.
+    Fetches details (Poster, Overview, Date, Rating, Genres, Runtime, Tagline, Streaming) via TMDB.
     """
     if pd.isna(tmdb_id):
         return None
     
-    url = f"https://api.themoviedb.org/3/movie/{int(tmdb_id)}?api_key={TMDB_API_KEY}&language=en-US"
+    # URL updated to include 'watch/providers' and set language to English
+    url = f"https://api.themoviedb.org/3/movie/{int(tmdb_id)}?api_key={TMDB_API_KEY}&language=en-US&append_to_response=watch/providers"
+    
     try:
         response = requests.get(url, timeout=1.5)
         if response.status_code == 200:
-            return response.json()
-    except:
+            data = response.json()
+            
+            # --- 1. BASIC DATA PROCESSING ---
+            # Genres: List of dicts -> String (max 3)
+            genres_list = [g['name'] for g in data.get('genres', [])]
+            genres_str = ", ".join(genres_list[:3])
+            
+            # Runtime: Minutes -> Xh YYm
+            runtime_min = data.get('runtime', 0)
+            runtime_str = f"{runtime_min // 60}h {runtime_min % 60:02d}m" if runtime_min else "N/A"
+
+            # --- 2. STREAMING DATA PROCESSING ---
+            # Targeting US market for English consistency (Change 'US' to 'FR' if needed)
+            providers = data.get('watch/providers', {}).get('results', {}).get('US', {})
+            flatrate = providers.get('flatrate', [])
+            
+            # Get top 3 providers with logos
+            streaming_list = []
+            for p in flatrate[:3]:
+                streaming_list.append({
+                    "name": p['provider_name'],
+                    "logo": f"https://image.tmdb.org/t/p/original{p['logo_path']}"
+                })
+
+            return {
+                "poster_path": data.get("poster_path"),
+                "backdrop_path": data.get("backdrop_path"),
+                "title": data.get("title"),
+                "overview": data.get("overview", "No overview available."),
+                "release_year": data.get("release_date", "Unknown")[:4],
+                "rating": round(data.get("vote_average", 0), 1),
+                "tagline": data.get("tagline", ""),
+                "genres": genres_str,
+                "runtime": runtime_str,
+                "streaming": streaming_list
+            }
+    except Exception as e:
+        # print(f"Error: {e}") # Debug only
         pass
     return None
 
@@ -143,14 +181,30 @@ if selected_movie and (start_analysis or st.session_state['selected_movie_name']
             
     with col_hero_txt:
         st.subheader(f"{selected_movie}")
+        
         if source_details:
-            date_sortie = source_details.get('release_date', 'Unknown')[:4]
-            note = round(source_details.get('vote_average', 0), 1)
-            overview = source_details.get('overview', 'No overview available.')
+            # Tagline (Slogan)
+            if source_details.get('tagline'):
+                st.markdown(f"_{source_details['tagline']}_")
             
-            st.caption(f"Year: {date_sortie} | TMDB Rating: {note}/10")
-            st.write(f"**Synopsis:** {overview}")
-    
+            # Metadata Line
+            st.caption(f"Year: {source_details['release_year']} | Runtime: {source_details['runtime']} | Genres: {source_details['genres']}")
+            
+            # Rating
+            st.write(f"**TMDB Rating:** {source_details['rating']}/10")
+            
+            # Synopsis
+            st.write(f"**Synopsis:** {source_details['overview']}")
+            
+            # Streaming Availability (Hero Section)
+            if source_details.get('streaming'):
+                st.write("")
+                st.markdown("**Available on:**")
+                logos_html = ""
+                for p in source_details['streaming']:
+                    logos_html += f'<img src="{p["logo"]}" style="width:40px; margin-right:8px; border-radius:5px;" title="{p["name"]}">'
+                st.markdown(logos_html, unsafe_allow_html=True)
+
     # --- SECTION TITLE ---
     st.write("") 
     st.subheader("Recommended Movies:")
@@ -163,7 +217,7 @@ if selected_movie and (start_analysis or st.session_state['selected_movie_name']
     cols = st.columns(5)
     
     for i, col in enumerate(cols):
-        neighbor_idx = indices.flatten()[i+1]
+        neighbor_idx = indices.flatten()[i+1] # Skip self
         distance = distances.flatten()[i+1]
         similarity = 1 - distance
         
@@ -183,8 +237,8 @@ if selected_movie and (start_analysis or st.session_state['selected_movie_name']
                 
                 # Title & Year
                 year = "????"
-                if neighbor_details and neighbor_details.get('release_date'):
-                    year = neighbor_details.get('release_date')[:4]
+                if neighbor_details and neighbor_details.get('release_year'):
+                    year = neighbor_details.get('release_year')
                 
                 st.markdown(f"**{neighbor_title}** ({year})")
                 
@@ -192,7 +246,15 @@ if selected_movie and (start_analysis or st.session_state['selected_movie_name']
                 st.progress(int(similarity * 100))
                 st.caption(f"Match: {int(similarity * 100)}%")
                 
-                # Exploration Button (CORRIGÉ AVEC ON_CLICK)
+                # Streaming Logos (Small versions for cards)
+                if neighbor_details and neighbor_details.get('streaming'):
+                    logos_html = ""
+                    for p in neighbor_details['streaming']:
+                        logos_html += f'<img src="{p["logo"]}" style="width:25px; margin-right:5px; border-radius:4px;" title="{p["name"]}">'
+                    st.markdown(logos_html, unsafe_allow_html=True)
+                    st.write("") # Spacer
+
+                # Exploration Button (Fixed with Callback)
                 st.button(
                     "Search this movie", 
                     key=f"btn_{neighbor_idx}", 
