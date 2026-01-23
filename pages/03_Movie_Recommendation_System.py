@@ -135,8 +135,26 @@ def set_movie(movie_title):
 # 4. MAIN INTERFACE
 # ==============================================================================
 
+# --- CALCUL PÉRIODE (Années Min/Max) ---
+min_year = "1995" # Valeur par défaut
+max_year = "2024" # Valeur par défaut
+
+try:
+    # On extrait les 4 chiffres entre parenthèses dans les titres
+    extracted_years = df_movies['title'].str.extract(r'\((\d{4})\)')[0]
+    # On convertit en nombres pour trouver le min et le max
+    extracted_years = pd.to_numeric(extracted_years, errors='coerce').dropna()
+    
+    if not extracted_years.empty:
+        min_year = int(extracted_years.min())
+        max_year = int(extracted_years.max())
+except:
+    pass # Si ça rate, on garde les valeurs par défaut
+
 st.title("Movie Recommendation System")
-st.markdown("From MovieLens 32M Dataset")
+
+# La phrase dynamique demandée :
+st.caption(f"Item-based filtering using user ratings from the MovieLens 32M dataset • Movie metadata via TMDB • Period: {min_year}–{max_year}")
 
 # --- INTELLIGENT SEARCH BAR ---
 index_to_select = None
@@ -240,9 +258,9 @@ if selected_movie and (start_analysis or st.session_state['selected_movie_name']
                 <div style="
                     height: 50px; 
                     display: flex; 
-                    align-items: left; 
-                    justify-content: left; 
-                    text-align: left; 
+                    align-items: center; 
+                    justify-content: center; 
+                    text-align: center; 
                     font-weight: bold; 
                     font-size: 14px;
                     margin-bottom: 5px;
