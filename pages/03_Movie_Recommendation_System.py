@@ -127,7 +127,7 @@ if selected and (go_btn or st.session_state['movie']):
             <div style="text-align: center; margin-top: -10px; font-size: 14px; color: #555;">
                 Match: {match}%
                 <div style="margin-top: 8px; font-size: 13px; color: #777;">
-                    ⭐ TMDB Rating: {n_info['rating']}
+                    TMDB Rating: {n_info['rating']}
                 </div>
             </div>
             """, unsafe_allow_html=True)
