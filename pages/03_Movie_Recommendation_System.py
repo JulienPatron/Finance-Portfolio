@@ -156,6 +156,10 @@ st.title("Movie Recommendation System")
 # La phrase dynamique demandée :
 st.caption(f"Item-based filtering using user ratings from the MovieLens 32M dataset • Movie metadata via TMDB • Period: {min_year}–{max_year}")
 
+# À mettre temporairement pour vérifier
+st.write("### 🦕 Les 5 plus vieux films du dataset :")
+st.table(df_movies[['title', 'release_year']].sort_values('release_year').head(5))
+
 # --- INTELLIGENT SEARCH BAR ---
 index_to_select = None
 if st.session_state['selected_movie_name'] in df_movies['title'].values:
