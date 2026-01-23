@@ -156,6 +156,14 @@ st.title("Movie Recommendation System")
 # La phrase dynamique demandée :
 st.caption(f"Item-based filtering using user ratings from the MovieLens 32M dataset • Movie metadata via TMDB • Period: {min_year}–{max_year}")
 
+# --- DEBUG : VÉRIFICATION DES ANCIENS FILMS ---
+with st.expander("See oldest movies in dataset (Debug)"):
+    # On crée une copie temporaire pour extraire l'année et trier
+    debug_df = df_movies.copy()
+    debug_df['year'] = pd.to_numeric(debug_df['title'].str.extract(r'\((\d{4})\)')[0], errors='coerce')
+    # On affiche le top 10 des plus vieux
+    st.dataframe(debug_df[['title', 'year']].sort_values('year').head(10), hide_index=True)
+    
 # --- INTELLIGENT SEARCH BAR ---
 index_to_select = None
 if st.session_state['selected_movie_name'] in df_movies['title'].values:
@@ -295,7 +303,3 @@ if selected_movie and (start_analysis or st.session_state['selected_movie_name']
 
 elif not selected_movie:
     st.info("Select a movie from the menu or type a title to start exploring.")
-
-# À mettre temporairement pour vérifier
-st.write("### 🦕 Les 5 plus vieux films du dataset :")
-st.table(df_movies[['title', 'release_year']].sort_values('release_year').head(5))
