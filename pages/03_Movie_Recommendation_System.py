@@ -242,7 +242,7 @@ if selected_movie and (start_analysis or st.session_state['selected_movie_name']
                     display: flex; 
                     align-items: center; 
                     justify-content: center; 
-                    text-align: center; 
+                    text-align: left; 
                     font-weight: bold; 
                     font-size: 14px;
                     margin-bottom: 5px;
