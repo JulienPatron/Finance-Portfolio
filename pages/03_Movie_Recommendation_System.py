@@ -234,7 +234,26 @@ if selected_movie and (start_analysis or st.session_state['selected_movie_name']
                 if neighbor_details and neighbor_details.get('release_year'):
                     year = neighbor_details.get('release_year')
                 
-                st.markdown(f"**{neighbor_title}** ({year})")
+                # Titre & Année (Correction Hauteur Fixe)
+                # On crée un bloc HTML de 50px de haut pour forcer l'alignement
+                title_html = f"""
+                <div style="
+                    height: 50px; 
+                    display: flex; 
+                    align-items: center; 
+                    justify-content: center; 
+                    text-align: center; 
+                    font-weight: bold; 
+                    font-size: 14px;
+                    margin-bottom: 5px;
+                    line-height: 1.2;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                ">
+                    {neighbor_title} ({year})
+                </div>
+                """
+                st.markdown(title_html, unsafe_allow_html=True)
                 
                 # Similarity Bar
                 st.progress(int(similarity * 100))
