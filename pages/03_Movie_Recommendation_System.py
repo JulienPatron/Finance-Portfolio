@@ -7,6 +7,7 @@ st.set_page_config(page_title="Project Portfolio", layout="wide")
 st.markdown("""
 <style>
     .block-container {padding-top: 1rem;}
+    /* Le bouton prend 100% de la largeur, ce qui le centre visuellement */
     div.stButton > button:first-child {width: 100%; border-radius: 5px; font-weight: bold;}
 </style>
 """, unsafe_allow_html=True)
@@ -67,13 +68,6 @@ if selected and (go_btn or st.session_state['movie']):
     row = df[df['title'] == selected].iloc[0]
     info = get_details(row['tmdbId'])
     
-    # SÉCURITÉ : Si info est vide (bug API), on remplit manuellement pour éviter le crash
-    if info is None:
-        info = {
-            "poster": "https://via.placeholder.com/300x450?text=Error",
-            "year": "????", "runtime": "N/A", "genres": "N/A", "rating": "N/A", "overview": "API Error", "streaming": []
-        }
-
     st.divider()
     
     # Hero Section
@@ -100,16 +94,6 @@ if selected and (go_btn or st.session_state['movie']):
         neighbor_title = neighbor_row['title'] 
         n_info = get_details(neighbor_row['tmdbId'])
         
-        # --- SÉCURITÉ ANTI-CRASH ---
-        # C'est ici que ça plantait ! Si n_info est None, on met des valeurs "bidon"
-        if n_info is None:
-            n_info = {
-                "poster": "https://via.placeholder.com/300x450?text=Unavailable",
-                "rating": "N/A",
-                "streaming": []
-            }
-        # ---------------------------
-        
         with col:
             st.image(n_info['poster'], use_container_width=True)
             
@@ -124,7 +108,9 @@ if selected and (go_btn or st.session_state['movie']):
             match = int((1 - distances.flatten()[i+1]) * 100)
             st.progress(match)
             
-            # Bloc TEXTE (Match + Rating)
+            # --- BLOC TEXTE AJUSTÉ ---
+            # margin-top: -10px -> Remonte le texte vers la barre bleue
+            # margin-top: 8px dans la div suivante -> Éloigne le Rating du Match
             st.markdown(f"""
             <div style="text-align: center; margin-top: -10px; font-size: 14px; color: #555;">
                 Match: {match}%
@@ -134,7 +120,8 @@ if selected and (go_btn or st.session_state['movie']):
             </div>
             """, unsafe_allow_html=True)
 
-            # Bloc LOGOS
+            # --- BLOC LOGOS AJUSTÉ ---
+            # margin-top & bottom: 12px -> Crée un espace homogène autour des logos
             logos_html = ""
             if n_info and n_info['streaming']:
                 logos_html = "".join([f'<img src="{p["logo"]}" style="width:35px; margin: 0 4px; border-radius:5px;" title="{p["name"]}">' for p in n_info['streaming']])
