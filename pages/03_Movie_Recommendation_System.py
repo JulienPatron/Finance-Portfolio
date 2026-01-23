@@ -7,7 +7,6 @@ st.set_page_config(page_title="Project Portfolio", layout="wide")
 st.markdown("""
 <style>
     .block-container {padding-top: 1rem;}
-    /* Le bouton prend 100% de la largeur, ce qui le centre visuellement */
     div.stButton > button:first-child {width: 100%; border-radius: 5px; font-weight: bold;}
 </style>
 """, unsafe_allow_html=True)
@@ -108,26 +107,23 @@ if selected and (go_btn or st.session_state['movie']):
             match = int((1 - distances.flatten()[i+1]) * 100)
             st.progress(match)
             
-            # --- BLOC TEXTE AJUSTÉ ---
-            # margin-top: -10px -> Remonte le texte vers la barre bleue
-            # margin-top: 8px dans la div suivante -> Éloigne le Rating du Match
+            # --- MODIFICATION: Bloc TEXTE (Match + Rating) ---
+            # On utilise un seul bloc HTML pour contrôler parfaitement les espaces
             st.markdown(f"""
-            <div style="text-align: center; margin-top: -10px; font-size: 14px; color: #555;">
-                Match: {match}%
-                <div style="margin-top: 8px; font-size: 13px; color: #777;">
-                    ⭐ TMDB Rating: {n_info['rating']}
-                </div>
+            <div style="text-align: center; margin-top: 5px; margin-bottom: 10px; font-size: 14px; color: #555; line-height: 1.4;">
+                Match: {match}%<br>
+                <span style="font-size: 13px; color: #777;">TMDB Rating: {n_info['rating']}</span>
             </div>
             """, unsafe_allow_html=True)
 
-            # --- BLOC LOGOS AJUSTÉ ---
-            # margin-top & bottom: 12px -> Crée un espace homogène autour des logos
+            # --- MODIFICATION: Bloc LOGOS ---
+            # Flexbox pour centrer horizontalement (justify-content) ET verticalement (align-items)
             logos_html = ""
             if n_info and n_info['streaming']:
                 logos_html = "".join([f'<img src="{p["logo"]}" style="width:35px; margin: 0 4px; border-radius:5px;" title="{p["name"]}">' for p in n_info['streaming']])
             
             st.markdown(f"""
-            <div style="height: 45px; margin-top: 12px; margin-bottom: 12px; display: flex; align-items: center; justify-content: center;">
+            <div style="height: 45px; display: flex; align-items: center; justify-content: center; margin-bottom: 5px;">
                 {logos_html}
             </div>
             """, unsafe_allow_html=True)
