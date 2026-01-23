@@ -70,7 +70,7 @@ def fetch_movie_details(tmdb_id):
         return None
     
     # URL updated to include 'watch/providers' and set language to English
-    url = f"https://api.themoviedb.org/3/movie/{int(tmdb_id)}?api_key={TMDB_API_KEY}&language=en-US&append_to_response=watch/providers"
+    url = f"https://api.themoviedb.org/3/movie/{int(tmdb_id)}?api_key={TMDB_API_KEY}&language=en-FR&append_to_response=watch/providers"
     
     try:
         response = requests.get(url, timeout=1.5)
