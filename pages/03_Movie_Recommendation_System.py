@@ -208,7 +208,7 @@ if selected_movie and (start_analysis or st.session_state['selected_movie_name']
 
     # 2. KNN CALCULATION
     distances, indices = model.kneighbors(matrix[matrice_id], n_neighbors=6)
-    
+
     # 3. RESULTS GRID
     cols = st.columns(5)
     
@@ -221,7 +221,10 @@ if selected_movie and (start_analysis or st.session_state['selected_movie_name']
         
         if not match.empty:
             neighbor_data = match.iloc[0]
+            # On prend directement le titre du CSV qui contient déjà l'année (ex: "Inception (2010)")
             neighbor_title = neighbor_data['title']
+            
+            # On appelle l'API juste pour l'image et le streaming
             neighbor_details = fetch_movie_details(neighbor_data['tmdbId'])
             
             with col:
@@ -231,13 +234,7 @@ if selected_movie and (start_analysis or st.session_state['selected_movie_name']
                 else:
                     st.image("https://via.placeholder.com/300x450?text=No+Image", use_container_width=True)
                 
-                # Title & Year
-                year = "????"
-                if neighbor_details and neighbor_details.get('release_year'):
-                    year = neighbor_details.get('release_year')
-                
-                # Titre & Année (Correction Hauteur Fixe)
-                # On crée un bloc HTML de 50px de haut pour forcer l'alignement
+                # Titre (Correction : On affiche juste le titre CSV, sans rajouter l'année)
                 title_html = f"""
                 <div style="
                     height: 50px; 
@@ -252,7 +249,7 @@ if selected_movie and (start_analysis or st.session_state['selected_movie_name']
                     overflow: hidden;
                     text-overflow: ellipsis;
                 ">
-                    {neighbor_title} ({year})
+                    {neighbor_title}
                 </div>
                 """
                 st.markdown(title_html, unsafe_allow_html=True)
@@ -261,7 +258,7 @@ if selected_movie and (start_analysis or st.session_state['selected_movie_name']
                 st.progress(int(similarity * 100))
                 st.caption(f"Match: {int(similarity * 100)}%")
                 
-                # Streaming Logos (Small versions for cards)
+                # Streaming Logos
                 if neighbor_details and neighbor_details.get('streaming'):
                     logos_html = ""
                     for p in neighbor_details['streaming']:
@@ -269,7 +266,7 @@ if selected_movie and (start_analysis or st.session_state['selected_movie_name']
                     st.markdown(logos_html, unsafe_allow_html=True)
                     st.write("") # Spacer
 
-                # Exploration Button (Fixed with Callback)
+                # Exploration Button
                 st.button(
                     "Search this movie", 
                     key=f"btn_{neighbor_idx}", 
