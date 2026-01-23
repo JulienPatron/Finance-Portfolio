@@ -64,34 +64,34 @@ def load_engine():
 
 def fetch_movie_details(tmdb_id):
     """
-    Fetches details (Poster, Overview, Date, Rating, Genres, Runtime, Tagline, Streaming) via TMDB.
+    Fetches details + Watch Providers via TMDB (Version FR).
     """
     if pd.isna(tmdb_id):
         return None
     
-    # URL updated to include 'watch/providers' and set language to English
-    url = f"https://api.themoviedb.org/3/movie/{int(tmdb_id)}?api_key={TMDB_API_KEY}&language=en-FR&append_to_response=watch/providers"
+    # On garde l'anglais pour le texte (synopsis), mais on veut les infos de streaming...
+    # Note: L'API renvoie les providers liés à la région demandée plus bas, pas la langue.
+    url = f"https://api.themoviedb.org/3/movie/{int(tmdb_id)}?api_key={TMDB_API_KEY}&language=en-US&append_to_response=watch/providers"
     
     try:
         response = requests.get(url, timeout=1.5)
         if response.status_code == 200:
             data = response.json()
             
-            # --- 1. BASIC DATA PROCESSING ---
-            # Genres: List of dicts -> String (max 3)
+            # --- 1. TRAITEMENT CLASSIQUE ---
             genres_list = [g['name'] for g in data.get('genres', [])]
             genres_str = ", ".join(genres_list[:3])
             
-            # Runtime: Minutes -> Xh YYm
             runtime_min = data.get('runtime', 0)
             runtime_str = f"{runtime_min // 60}h {runtime_min % 60:02d}m" if runtime_min else "N/A"
 
-            # --- 2. STREAMING DATA PROCESSING ---
-            # Targeting US market for English consistency (Change 'US' to 'FR' if needed)
-            providers = data.get('watch/providers', {}).get('results', {}).get('US', {})
+            # --- 2. TRAITEMENT STREAMING (CORRECTION FR 🇫🇷) ---
+            # On change 'US' par 'FR' ici !
+            providers = data.get('watch/providers', {}).get('results', {}).get('FR', {})
+            
+            # On cherche les plateformes de streaming "Flatrate" (Abonnement)
             flatrate = providers.get('flatrate', [])
             
-            # Get top 3 providers with logos
             streaming_list = []
             for p in flatrate[:3]:
                 streaming_list.append({
@@ -106,13 +106,11 @@ def fetch_movie_details(tmdb_id):
                 "overview": data.get("overview", "No overview available."),
                 "release_year": data.get("release_date", "Unknown")[:4],
                 "rating": round(data.get("vote_average", 0), 1),
-                "tagline": data.get("tagline", ""),
                 "genres": genres_str,
                 "runtime": runtime_str,
                 "streaming": streaming_list
             }
     except Exception as e:
-        # print(f"Error: {e}") # Debug only
         pass
     return None
 
@@ -182,11 +180,7 @@ if selected_movie and (start_analysis or st.session_state['selected_movie_name']
     with col_hero_txt:
         st.subheader(f"{selected_movie}")
         
-        if source_details:
-            # Tagline (Slogan)
-            if source_details.get('tagline'):
-                st.markdown(f"_{source_details['tagline']}_")
-            
+        if source_details:         
             # Metadata Line
             st.caption(f"Year: {source_details['release_year']} | Runtime: {source_details['runtime']} | Genres: {source_details['genres']}")
             
@@ -202,7 +196,7 @@ if selected_movie and (start_analysis or st.session_state['selected_movie_name']
                 st.markdown("**Available on:**")
                 logos_html = ""
                 for p in source_details['streaming']:
-                    logos_html += f'<img src="{p["logo"]}" style="width:40px; margin-right:8px; border-radius:5px;" title="{p["name"]}">'
+                    logos_html += f'<img src="{p["logo"]}" style="width:60px; margin-right:10px; border-radius:8px;" title="{p["name"]}">'
                 st.markdown(logos_html, unsafe_allow_html=True)
 
     # --- SECTION TITLE ---
@@ -250,7 +244,7 @@ if selected_movie and (start_analysis or st.session_state['selected_movie_name']
                 if neighbor_details and neighbor_details.get('streaming'):
                     logos_html = ""
                     for p in neighbor_details['streaming']:
-                        logos_html += f'<img src="{p["logo"]}" style="width:25px; margin-right:5px; border-radius:4px;" title="{p["name"]}">'
+                        logos_html += f'<img src="{p["logo"]}" style="width:35px; margin-right:5px; border-radius:5px;" title="{p["name"]}">'
                     st.markdown(logos_html, unsafe_allow_html=True)
                     st.write("") # Spacer
 
