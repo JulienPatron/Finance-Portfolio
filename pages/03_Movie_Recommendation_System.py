@@ -88,7 +88,7 @@ if selected and (go_btn or st.session_state['movie']):
             st.markdown("".join([f'<img src="{p["logo"]}" style="width:50px; margin-right:10px; border-radius:8px;" title="{p["name"]}">' for p in info['streaming']]), unsafe_allow_html=True)
 
     # Recommandations (KNN)
-    st.subheader("Recommended Movies:")
+    st.subheader("Fans also liked:")
     distances, indices = model.kneighbors(matrix[row['matrice_id']], n_neighbors=6)
     cols = st.columns(5)
     
