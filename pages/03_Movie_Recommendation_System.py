@@ -15,7 +15,6 @@ st.markdown("""
 @st.cache_resource
 def load_data():
     try:
-        # Chemins des fichiers (local ou dossier parent)
         files = {"model": "modele_knn.pkl.gz", "matrix": "matrice_sparse.pkl.gz", "db": "liste_films_final.csv"}
         if not os.path.exists(files["db"]): 
             files = {k: f"../{v}" for k, v in files.items()}
@@ -28,7 +27,7 @@ def load_data():
 model, matrix, df = load_data()
 if model is None: st.stop()
 
-# 3. FONCTION API TMDB (Simplifiée)
+# 3. FONCTION API TMDB
 def get_details(tmdb_id):
     if pd.isna(tmdb_id): return None
     api_key = st.secrets["TMDB_API_KEY"]
@@ -36,8 +35,6 @@ def get_details(tmdb_id):
     
     try:
         data = requests.get(url, timeout=1).json()
-        
-        # Récupération Streaming FR
         providers = data.get('watch/providers', {}).get('results', {}).get('FR', {}).get('flatrate', [])[:3]
         logos = [{"logo": f"https://image.tmdb.org/t/p/original{p['logo_path']}", "name": p['provider_name']} for p in providers]
 
@@ -61,14 +58,12 @@ def update_selection(title): st.session_state['movie'] = title
 st.title("Movie Recommendation System")
 st.markdown("Item-based filtering using user ratings from the MovieLens 32M dataset | Movie data from TMDB | Up to: 2023")
 
-# Barre de recherche intelligente
 idx = int(df[df['title'] == st.session_state['movie']].index[0]) if st.session_state['movie'] in df['title'].values else None
 selected = st.selectbox("Select a reference movie:", df['title'].values, index=idx, placeholder="Type a title (e.g. Inception)")
 go_btn = st.button("Start", type="primary")
 
 # 5. MOTEUR DE RECOMMANDATION
 if selected and (go_btn or st.session_state['movie']):
-    # Infos du film sélectionné
     row = df[df['title'] == selected].iloc[0]
     info = get_details(row['tmdbId'])
     
@@ -95,33 +90,42 @@ if selected and (go_btn or st.session_state['movie']):
     for i, col in enumerate(cols):
         neighbor_id = indices.flatten()[i+1]
         neighbor_row = df[df['matrice_id'] == neighbor_id].iloc[0]
-        # Important: On prend le titre du CSV pour éviter le bug des années en double
         neighbor_title = neighbor_row['title'] 
-        
-        # Appel API pour l'image
         n_info = get_details(neighbor_row['tmdbId'])
         
         with col:
             st.image(n_info['poster'], use_container_width=True)
             
-            # Titre à hauteur fixe (HTML)
+            # Titre
             st.markdown(f"""
             <div style="height: 50px; display: flex; align-items: center; justify-content: center; text-align: center; font-weight: bold; font-size: 14px; margin-bottom: 5px; line-height: 1.2; overflow: hidden; text-overflow: ellipsis;">
                 {neighbor_title}
             </div>
             """, unsafe_allow_html=True)
             
-            # Barre de match
+            # Barre de progression
             match = int((1 - distances.flatten()[i+1]) * 100)
             st.progress(match)
-            st.caption(f"Match: {match}%")
-            st.caption(f"TMDB Rating: {n_info['rating']}")
             
-            # Logos Streaming (Version mini)
+            # --- MODIFICATION: Bloc TEXTE (Match + Rating) ---
+            # On utilise un seul bloc HTML pour contrôler parfaitement les espaces
+            st.markdown(f"""
+            <div style="text-align: center; margin-top: 5px; margin-bottom: 10px; font-size: 14px; color: #555; line-height: 1.4;">
+                Match: {match}%<br>
+                <span style="font-size: 13px; color: #777;">TMDB Rating: {n_info['rating']}</span>
+            </div>
+            """, unsafe_allow_html=True)
+
+            # --- MODIFICATION: Bloc LOGOS ---
+            # Flexbox pour centrer horizontalement (justify-content) ET verticalement (align-items)
             logos_html = ""
             if n_info and n_info['streaming']:
-                logos_html = "".join([f'<img src="{p["logo"]}" style="width:35px; margin-right:5px; border-radius:5px;" title="{p["name"]}">' for p in n_info['streaming']])
+                logos_html = "".join([f'<img src="{p["logo"]}" style="width:35px; margin: 0 4px; border-radius:5px;" title="{p["name"]}">' for p in n_info['streaming']])
             
-            st.markdown(f'<div style="height: 50px; margin-bottom: 5px; display: flex; align-items: center;">{logos_html}</div>', unsafe_allow_html=True)
-            
+            st.markdown(f"""
+            <div style="height: 45px; display: flex; align-items: center; justify-content: center; margin-bottom: 5px;">
+                {logos_html}
+            </div>
+            """, unsafe_allow_html=True)
+
             st.button("Search this movie", key=f"btn_{neighbor_id}", on_click=update_selection, args=(neighbor_title,))
