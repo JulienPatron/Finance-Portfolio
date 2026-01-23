@@ -1,0 +1,15 @@
+# 1. SÉCURITÉ (Le plus important)
+.streamlit/secrets.toml
+
+# 2. ENVIRONNEMENT VIRTUEL (Ne jamais envoyer ça sur GitHub)
+.venv/
+venv/
+env/
+
+# 3. CACHE PYTHON (Fichiers temporaires inutiles)
+__pycache__/
+*.pyc
+
+# 4. SYSTÈME & VS CODE (Fichiers de config locaux)
+.DS_Store
+.vscode/
