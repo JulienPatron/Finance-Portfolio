@@ -1,14 +1,13 @@
 import streamlit as st
 import pandas as pd
 import pickle, requests, os, gzip
-import gc # Pour le nettoyage mémoire
+import gc
 
 # 1. CONFIGURATION & STYLE
 st.set_page_config(page_title="Project Portfolio", layout="wide")
 st.markdown("""
 <style>
     .block-container {padding-top: 1rem;}
-    /* Plus besoin du CSS compliqué pour le bouton */
 </style>
 """, unsafe_allow_html=True)
 
@@ -22,11 +21,11 @@ def load_data():
 
         with gzip.open(files["model"], 'rb') as f: 
             model = pickle.load(f)
-        gc.collect() # Optimisation RAM
+        gc.collect()
 
         with gzip.open(files["matrix"], 'rb') as f: 
             matrix = pickle.load(f)
-        gc.collect() # Optimisation RAM
+        gc.collect()
 
         return model, matrix, pd.read_csv(files["db"])
     except: return None, None, None
@@ -74,7 +73,6 @@ if selected and (go_btn or st.session_state['movie']):
     row = df[df['title'] == selected].iloc[0]
     info = get_details(row['tmdbId'])
     
-    # SÉCURITÉ ANTI-CRASH (Au cas où l'API bug)
     if info is None:
         info = {"poster": "https://via.placeholder.com/300x450?text=Error", "year": "????", "runtime": "N/A", "genres": "N/A", "rating": "N/A", "overview": "Unavailable", "streaming": []}
 
@@ -96,6 +94,13 @@ if selected and (go_btn or st.session_state['movie']):
     # Recommandations (KNN)
     st.subheader("Fans also liked:")
     distances, indices = model.kneighbors(matrix[row['matrice_id']], n_neighbors=6)
+    
+    # --- CALCUL DU SCORE RELATIF (Le 1er = 100%) ---
+    # On récupère la distance du meilleur voisin (index 1)
+    best_distance = distances.flatten()[1]
+    best_raw_score = 1 - best_distance
+    # -----------------------------------------------
+
     cols = st.columns(5)
     
     for i, col in enumerate(cols):
@@ -104,7 +109,6 @@ if selected and (go_btn or st.session_state['movie']):
         neighbor_title = neighbor_row['title'] 
         n_info = get_details(neighbor_row['tmdbId'])
         
-        # SÉCURITÉ ANTI-CRASH DANS LA BOUCLE
         if n_info is None:
             n_info = {"poster": "https://via.placeholder.com/300x450?text=Unavailable", "rating": "N/A", "streaming": []}
         
@@ -118,14 +122,24 @@ if selected and (go_btn or st.session_state['movie']):
             </div>
             """, unsafe_allow_html=True)
             
-            # Barre de progression
-            match = int((1 - distances.flatten()[i+1]) * 100)
-            st.progress(match)
+            # --- CALCUL DU % POUR L'AFFICHAGE ---
+            raw_score = 1 - distances.flatten()[i+1]
             
-            # Bloc TEXTE (Match + Rating)
+            # Formule : (Score du film / Score du 1er film) * 100
+            if best_raw_score > 0:
+                match_percentage = int((raw_score / best_raw_score) * 100)
+            else:
+                match_percentage = 0
+            
+            # Sécurité pour ne jamais dépasser 100
+            match_percentage = min(match_percentage, 100)
+            
+            st.progress(match_percentage)
+            
+            # Bloc TEXTE
             st.markdown(f"""
             <div style="text-align: center; margin-top: -10px; font-size: 14px; color: #555;">
-                Match: {match}%
+                Match: {match_percentage}%
                 <div style="margin-top: 8px; font-size: 13px; color: #777;">
                     TMDB Rating: {n_info['rating']}
                 </div>
@@ -143,5 +157,4 @@ if selected and (go_btn or st.session_state['movie']):
             </div>
             """, unsafe_allow_html=True)
 
-            # CORRECTION : use_container_width=True force le bouton à prendre toute la largeur
             st.button("Search this movie", key=f"btn_{neighbor_id}", on_click=update_selection, args=(neighbor_title,), use_container_width=True)
