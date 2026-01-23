@@ -1,14 +1,14 @@
 import streamlit as st
 import pandas as pd
 import pickle, requests, os, gzip
+import gc # Pour le nettoyage mémoire
 
 # 1. CONFIGURATION & STYLE
 st.set_page_config(page_title="Project Portfolio", layout="wide")
 st.markdown("""
 <style>
     .block-container {padding-top: 1rem;}
-    /* Le bouton prend 100% de la largeur, ce qui le centre visuellement */
-    div.stButton > button:first-child {width: 100%; border-radius: 5px; font-weight: bold;}
+    /* Plus besoin du CSS compliqué pour le bouton */
 </style>
 """, unsafe_allow_html=True)
 
@@ -20,8 +20,14 @@ def load_data():
         if not os.path.exists(files["db"]): 
             files = {k: f"../{v}" for k, v in files.items()}
 
-        with gzip.open(files["model"], 'rb') as f: model = pickle.load(f)
-        with gzip.open(files["matrix"], 'rb') as f: matrix = pickle.load(f)
+        with gzip.open(files["model"], 'rb') as f: 
+            model = pickle.load(f)
+        gc.collect() # Optimisation RAM
+
+        with gzip.open(files["matrix"], 'rb') as f: 
+            matrix = pickle.load(f)
+        gc.collect() # Optimisation RAM
+
         return model, matrix, pd.read_csv(files["db"])
     except: return None, None, None
 
@@ -68,6 +74,10 @@ if selected and (go_btn or st.session_state['movie']):
     row = df[df['title'] == selected].iloc[0]
     info = get_details(row['tmdbId'])
     
+    # SÉCURITÉ ANTI-CRASH (Au cas où l'API bug)
+    if info is None:
+        info = {"poster": "https://via.placeholder.com/300x450?text=Error", "year": "????", "runtime": "N/A", "genres": "N/A", "rating": "N/A", "overview": "Unavailable", "streaming": []}
+
     st.divider()
     
     # Hero Section
@@ -94,6 +104,10 @@ if selected and (go_btn or st.session_state['movie']):
         neighbor_title = neighbor_row['title'] 
         n_info = get_details(neighbor_row['tmdbId'])
         
+        # SÉCURITÉ ANTI-CRASH DANS LA BOUCLE
+        if n_info is None:
+            n_info = {"poster": "https://via.placeholder.com/300x450?text=Unavailable", "rating": "N/A", "streaming": []}
+        
         with col:
             st.image(n_info['poster'], use_container_width=True)
             
@@ -108,9 +122,7 @@ if selected and (go_btn or st.session_state['movie']):
             match = int((1 - distances.flatten()[i+1]) * 100)
             st.progress(match)
             
-            # --- BLOC TEXTE AJUSTÉ ---
-            # margin-top: -10px -> Remonte le texte vers la barre bleue
-            # margin-top: 8px dans la div suivante -> Éloigne le Rating du Match
+            # Bloc TEXTE (Match + Rating)
             st.markdown(f"""
             <div style="text-align: center; margin-top: -10px; font-size: 14px; color: #555;">
                 Match: {match}%
@@ -120,8 +132,7 @@ if selected and (go_btn or st.session_state['movie']):
             </div>
             """, unsafe_allow_html=True)
 
-            # --- BLOC LOGOS AJUSTÉ ---
-            # margin-top & bottom: 12px -> Crée un espace homogène autour des logos
+            # Bloc LOGOS
             logos_html = ""
             if n_info and n_info['streaming']:
                 logos_html = "".join([f'<img src="{p["logo"]}" style="width:35px; margin: 0 4px; border-radius:5px;" title="{p["name"]}">' for p in n_info['streaming']])
@@ -132,4 +143,5 @@ if selected and (go_btn or st.session_state['movie']):
             </div>
             """, unsafe_allow_html=True)
 
-            st.button("Search this movie", key=f"btn_{neighbor_id}", on_click=update_selection, args=(neighbor_title,))
+            # CORRECTION : use_container_width=True force le bouton à prendre toute la largeur
+            st.button("Search this movie", key=f"btn_{neighbor_id}", on_click=update_selection, args=(neighbor_title,), use_container_width=True)
