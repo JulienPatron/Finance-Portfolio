@@ -114,7 +114,7 @@ if selected and (go_btn or st.session_state['movie']):
             # Barre de match
             match = int((1 - distances.flatten()[i+1]) * 100)
             st.progress(match)
-            st.caption(f"Match: {match}% | Rating: {n_info['rating']}")
+            st.caption(f"Match: {match}% | TMDB Rating: {n_info['rating']}")
             
             # Logos Streaming (Version mini)
             logos_html = ""
