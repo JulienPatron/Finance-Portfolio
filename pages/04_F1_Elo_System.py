@@ -177,7 +177,7 @@ st.markdown("""
         border-radius: 8px;
         border: 1px solid #e0e0e0;
         /* HAUTEUR FORCÉE POUR MATCHER LE GRAPHIQUE */
-        min-height: 500px !important; 
+        min-height: 350px !important; 
         align-items: flex-start !important; /* Pour que les tags restent en haut */
     }
 
@@ -257,7 +257,7 @@ if df_raw is not None:
                 
                 # Hauteur fixée à 500px pour matcher le CSS du sélecteur
                 fig.update_layout(
-                    height=350, 
+                    height=500, 
                     margin=dict(l=10, r=10, t=10, b=10),
                     yaxis_range=[chart_data['Elo'].min() - 50, chart_data['Elo'].max() + 50],
                     showlegend=True, 
