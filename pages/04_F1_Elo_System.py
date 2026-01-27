@@ -171,17 +171,19 @@ st.markdown("""
 
     /* 2. SELECTEUR DE PILOTES (Make it Clean) */
     
-    /* Le conteneur des tags : FOND BLANC */
+    /* Le conteneur des tags : FOND BLANC et HAUTEUR 350px */
     div[data-baseweb="select"] > div {
         background-color: #ffffff; 
         border-radius: 8px;
         border: 1px solid #e0e0e0;
+        min-height: 350px !important; /* Hauteur ajustée pour le graph */
+        align-items: flex-start !important;
     }
 
-    /* Les Tags : NOUVEAU BLEU */
+    /* Les Tags : NOUVEAU BLEU et COULEUR TEXTE MAJ */
     span[data-baseweb="tag"] {
-        background-color: #DBE6F7 !important; /* Le nouveau bleu demandé */
-        color: #0c5460 !important;
+        background-color: #DBE6F7 !important; 
+        color: #095AA7 !important; /* COULEUR TEXTE MODIFIÉE ICI */
         border: 1px solid #bee5eb;
         border-radius: 20px !important;
         padding: 2px 10px !important;
@@ -253,8 +255,9 @@ if df_raw is not None:
                 fig = px.line(chart_data, x='Date', y='Elo', color='Driver', 
                               color_discrete_sequence=px.colors.qualitative.Bold)
                 
+                # Hauteur fixée à 350px pour matcher le sélecteur
                 fig.update_layout(
-                    height=500, 
+                    height=350, 
                     margin=dict(l=10, r=10, t=10, b=10),
                     yaxis_range=[chart_data['Elo'].min() - 50, chart_data['Elo'].max() + 50],
                     showlegend=True, 
