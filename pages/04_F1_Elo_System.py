@@ -10,7 +10,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- 1. LE MOTEUR MATHÉMATIQUE (IDENTIQUE) ---
+# --- 1. LE MOTEUR MATHÉMATIQUE ---
 class F1EloRating:
     def __init__(self, k_team_max=32, k_field=5):
         self.k_team_max = k_team_max 
@@ -50,7 +50,7 @@ class F1EloRating:
 
         return total_delta
 
-# --- 2. CHARGEMENT (IDENTIQUE) ---
+# --- 2. CHARGEMENT ---
 @st.cache_data
 def load_and_clean_data():
     try:
@@ -74,7 +74,7 @@ def load_and_clean_data():
         st.error(f"Erreur de chargement : {e}")
         return None
 
-# --- 3. BOUCLE DE CALCUL (IDENTIQUE) ---
+# --- 3. CALCUL ELO ---
 @st.cache_data(show_spinner=False)
 def compute_elo_history(df):
     engine = F1EloRating()
@@ -118,47 +118,26 @@ def compute_elo_history(df):
     prog_bar.empty()
     return pd.DataFrame(history_records)
 
-# --- 4. FONCTION UTILITAIRE : CALCUL DES ÉCARTS COÉQUIPIERS ---
+# --- 4. FONCTION GAP ---
 def calculate_teammate_gaps(final_rankings):
-    """
-    Crée un DataFrame avec l'écart Elo vis-à-vis du coéquipier le plus proche.
-    """
     gap_data = []
-    
     for _, row in final_rankings.iterrows():
         driver = row['Driver']
         team = row['Team']
         elo = row['Elo']
-        
-        # Trouver les coéquipiers dans la même écurie
-        teammates = final_rankings[
-            (final_rankings['Team'] == team) & 
-            (final_rankings['Driver'] != driver)
-        ]
-        
+        teammates = final_rankings[(final_rankings['Team'] == team) & (final_rankings['Driver'] != driver)]
         gap = 0
         mate_name = "Aucun"
-        
         if not teammates.empty:
-            # On cherche le coéquipier le plus proche en niveau Elo (valeur absolue)
             teammates = teammates.copy()
             teammates['diff_abs'] = (teammates['Elo'] - elo).abs()
             closest_mate = teammates.sort_values('diff_abs').iloc[0]
-            
             mate_name = closest_mate['Driver']
-            gap = elo - closest_mate['Elo'] # Positif = Je suis meilleur
-            
-        gap_data.append({
-            'Driver': driver,
-            'Team': team,
-            'Elo': elo,
-            'Gap': gap,
-            'Vs_Mate': mate_name
-        })
-        
+            gap = elo - closest_mate['Elo']
+        gap_data.append({'Driver': driver, 'Team': team, 'Elo': elo, 'Gap': gap, 'Vs_Mate': mate_name})
     return pd.DataFrame(gap_data).sort_values(by='Gap', ascending=False)
 
-# --- 5. INTERFACE UI/UX ---
+# --- 5. INTERFACE ---
 
 st.title("🏎️ F1 Elo Analytics")
 st.markdown("""
@@ -174,48 +153,41 @@ df_raw = load_and_clean_data()
 if df_raw is not None:
     if 'elo_data' not in st.session_state:
         st.session_state['elo_data'] = compute_elo_history(df_raw)
-    
     df_elo = st.session_state['elo_data']
 
-    # --- SIDEBAR ---
+    # SIDEBAR
     with st.sidebar:
         st.header("⚙️ Paramètres")
-        st.write("Pilotes pour l'onglet 'All Time'.")
+        st.write("Comparateur All Time")
         all_drivers = sorted(df_elo['Driver'].unique())
         default_selection = ["Michael Schumacher", "Lewis Hamilton", "Max Verstappen", "Ayrton Senna", "Alain Prost", "Juan Manuel Fangio"]
         valid_defaults = [d for d in default_selection if d in all_drivers]
-        selected_drivers = st.multiselect("Pilotes à comparer", all_drivers, default=valid_defaults)
+        selected_drivers = st.multiselect("Pilotes", all_drivers, default=valid_defaults)
 
-    # --- TABS ---
     tab_all_time, tab_season = st.tabs(["🏛️ All Time & Légendes", "📅 Analyse par Saison"])
 
-    # =========================================================================
-    # ONGLET 1 : ALL TIME
-    # =========================================================================
+    # --- TAB ALL TIME ---
     with tab_all_time:
         st.write("") 
         col_left, col_right = st.columns(2)
         
-        # GAUCHE : DUEL
+        # Chart Duel (Gauche)
         with col_left:
             st.subheader("⚔️ Duel au Sommet")
             if selected_drivers:
                 chart_data = df_elo[df_elo['Driver'].isin(selected_drivers)].copy()
                 fig = px.line(chart_data, x='Date', y='Elo', color='Driver', 
                               color_discrete_sequence=px.colors.qualitative.Bold)
-                
                 fig.update_layout(
-                    height=450,
-                    margin=dict(l=10, r=10, t=30, b=50),
+                    height=450, margin=dict(l=10, r=10, t=30, b=50),
                     yaxis_range=[chart_data['Elo'].min() - 50, chart_data['Elo'].max() + 50],
-                    showlegend=True,
-                    legend=dict(orientation="h", y=-0.2, x=0) # Légende en bas
+                    showlegend=True, legend=dict(orientation="h", y=-0.2, x=0)
                 )
                 st.plotly_chart(fig, use_container_width=True)
             else:
                 st.info("Sélectionnez des pilotes.")
 
-        # DROITE : GOAT
+        # Chart GOAT (Droite)
         with col_right:
             st.subheader("⛰️ L'Histoire du Record (GOAT)")
             df_sorted = df_elo.sort_values(by='Date')
@@ -227,22 +199,32 @@ if df_raw is not None:
                     goat_records.append(row)
             df_goat = pd.DataFrame(goat_records)
             
-            fig_goat = px.line(df_goat, x='Date', y='Elo', color='Driver', 
-                               line_shape='hv', markers=True)
+            # TRI POUR LA LÉGENDE : Du plus haut record (haut) au plus petit (bas)
+            legend_order = df_goat.sort_values(by='Elo', ascending=False)['Driver'].unique().tolist()
+            
+            # Utilisation de SCATTER pour des points non reliés
+            fig_goat = px.scatter(
+                df_goat, 
+                x='Date', 
+                y='Elo', 
+                color='Driver',
+                category_orders={"Driver": legend_order} # Force l'ordre de la légende
+            )
+            
+            fig_goat.update_traces(marker=dict(size=8, line=dict(width=1, color='DarkSlateGrey')))
             
             fig_goat.update_layout(
-                height=450,
-                margin=dict(l=10, r=10, t=30, b=50),
+                height=450, margin=dict(l=10, r=10, t=30, b=50),
                 yaxis_range=[1500, df_goat['Elo'].max() + 50],
                 showlegend=True,
-                legend=dict(orientation="h", y=-0.2, x=0), # Légende en bas pour ne pas manger le graph
+                # Légende à droite (verticale par défaut quand pas spécifié horizontal)
+                legend_title="Record Holders",
                 yaxis_title="Record Elo Absolu"
             )
             st.plotly_chart(fig_goat, use_container_width=True)
 
         st.divider()
         st.subheader("🏆 Les Plus Hauts Pics de Carrière (Peak Elo)")
-        
         idx = df_elo.groupby(['Driver'])['Elo'].idxmax()
         best_elo_df = df_elo.loc[idx].sort_values(by='Elo', ascending=False).reset_index(drop=True)
         best_elo_df.index += 1
@@ -253,85 +235,56 @@ if df_raw is not None:
             column_config={
                 "Elo": st.column_config.ProgressColumn("Peak Elo", format="%d", min_value=1500, max_value=2600),
                 "Year": st.column_config.NumberColumn("Année du Pic", format="%d")
-            },
-            height=500
+            }, height=500
         )
 
-    # =========================================================================
-    # ONGLET 2 : ANALYSE SAISON
-    # =========================================================================
+    # --- TAB SAISON ---
     with tab_season:
         years_list = sorted(df_elo['Year'].unique(), reverse=True)
         col_sel, col_kpi = st.columns([1, 3])
-        
         with col_sel:
             selected_year = st.selectbox("📅 Choisir la saison", years_list)
         
-        # Données de l'année
         data_year = df_elo[df_elo['Year'] == selected_year].copy()
         last_date = data_year['Date'].max()
-        
-        # Classement final brut
         final_rankings = data_year[data_year['Date'] == last_date].sort_values(by='Elo', ascending=False)
-        
-        # Calcul des écarts coéquipiers
-        gap_df = calculate_teammate_gaps(final_rankings)
-        top_driver = gap_df.iloc[0] # Le pilote avec le Elo le plus haut (car trié par Elo avant calcul) mais gap_df est trié par Gap...
-        # Attention: gap_df est trié par GAP. Retrouvons le champion (plus haut Elo)
         champion = final_rankings.iloc[0]
-        champion_stats = gap_df[gap_df['Driver'] == champion['Driver']].iloc[0]
+        
+        # Calcul gap pour le tableau du bas seulement
+        gap_df = calculate_teammate_gaps(final_rankings)
         
         with col_kpi:
             c1, c2, c3 = st.columns(3)
             c1.metric("Champion Elo", champion['Driver'])
             c2.metric("Score Final", f"{int(champion['Elo'])}")
-            
-            gap_val = champion_stats['Gap']
-            sign = "+" if gap_val > 0 else ""
-            mate_txt = f"vs {champion_stats['Vs_Mate']}" if champion_stats['Vs_Mate'] != "Aucun" else "Sans coéquipier"
-            c3.metric(f"Écart {mate_txt}", f"{sign}{int(gap_val)} pts")
+            # RETOUR DE L'ÉCURIE ICI
+            c3.metric("Écurie", champion['Team'])
 
         st.subheader(f"📈 Progression sur la saison {selected_year}")
-        
-        # Liste des pilotes triée par ordre Elo FINAL (pour la légende)
         sorted_drivers_legend = final_rankings['Driver'].tolist()
-        
-        # Top 10 + Sélection
         top_10_drivers = final_rankings.head(10)['Driver'].tolist()
         drivers_to_plot = list(set(top_10_drivers + selected_drivers))
         chart_data_season = data_year[data_year['Driver'].isin(drivers_to_plot)].copy()
         
         fig_season = px.line(
-            chart_data_season, 
-            x='Date', y='Elo', color='Driver',
-            markers=True,
-            # C'EST ICI QU'ON FORCE L'ORDRE DE LA LÉGENDE
-            category_orders={"Driver": sorted_drivers_legend} 
+            chart_data_season, x='Date', y='Elo', color='Driver',
+            markers=True, category_orders={"Driver": sorted_drivers_legend}
         )
-        
         fig_season.update_layout(
-            height=500,
-            yaxis_range=[chart_data_season['Elo'].min() - 20, chart_data_season['Elo'].max() + 20],
+            height=500, yaxis_range=[chart_data_season['Elo'].min() - 20, chart_data_season['Elo'].max() + 20],
             hovermode="x unified"
         )
         st.plotly_chart(fig_season, use_container_width=True)
         
         st.subheader("⚔️ Domination Interne (Écart vs Coéquipier)")
-        st.write("Ce tableau classe les pilotes par l'écart de points creusé face à leur coéquipier le plus proche.")
-        
         st.dataframe(
             gap_df[['Driver', 'Team', 'Elo', 'Gap', 'Vs_Mate']].reset_index(drop=True),
             use_container_width=True,
             column_config={
                 "Elo": st.column_config.NumberColumn("Elo", format="%d"),
-                "Gap": st.column_config.NumberColumn(
-                    "Écart", 
-                    format="%+d", # Affiche le + ou le -
-                    help="Différence de points avec le coéquipier le plus proche"
-                ),
+                "Gap": st.column_config.NumberColumn("Écart", format="%+d"),
                 "Vs_Mate": "Comparé à"
-            },
-            height=600
+            }, height=600
         )
 
 else:
