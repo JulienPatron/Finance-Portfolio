@@ -220,7 +220,7 @@ if df_raw is not None:
         High weighting. The score changes significantly based on finishing position relative to the teammate.
         
         **2. Field Factor**
-        Lower weighting. This helps contextualize the car's overall level (good drivers often have good cars).
+        Lower weighting. This helps contextualize the car's overall level.
         """)
 
     # --- TABS ---
