@@ -75,7 +75,7 @@ def load_and_clean_data():
         return None
 
 # --- 3. BOUCLE DE CALCUL (IDENTIQUE) ---
-@st.cache_data(show_spinner=False) # On cache le spinner par défaut pour gérer le nôtre
+@st.cache_data(show_spinner=False)
 def compute_elo_history(df):
     engine = F1EloRating()
     current_ratings = {}
@@ -83,12 +83,11 @@ def compute_elo_history(df):
     
     races = df.groupby(['Year', 'Round', 'Date', 'GP_Name'], sort=False)
     
-    # Barre de chargement personnalisée dans la sidebar
+    # Barre de chargement
     prog_bar = st.sidebar.progress(0, text="Initialisation du moteur Elo...")
     total_races = len(races)
     
     for i, ((year, round_num, date, gp), race_df) in enumerate(races):
-        # Update progress bar moins souvent pour la vitesse
         if i % 100 == 0: 
             prog_bar.progress(i / total_races, text=f"Calcul de la saison {year}...")
         
@@ -117,113 +116,106 @@ def compute_elo_history(df):
                 'Elo': new_rating, 'Team': driver['team']
             })
             
-    prog_bar.empty() # Disparait à la fin
+    prog_bar.empty()
     return pd.DataFrame(history_records)
 
 # --- 4. INTERFACE UI/UX ---
 
-# Header épuré
 st.title("🏎️ F1 Elo Analytics")
 st.markdown("""
 <style>
+    div[data-testid="stMetricValue"] { font-size: 24px; }
     .stTabs [data-baseweb="tab-list"] { gap: 24px; }
-    .stTabs [data-baseweb="tab"] { height: 50px; white-space: pre-wrap; background-color: transparent; border-radius: 4px 4px 0px 0px; gap: 1px; padding-top: 10px; padding-bottom: 10px; }
-    div[data-testid="stMetricValue"] { font-size: 28px; }
+    .stTabs [data-baseweb="tab"] { font-weight: bold; }
 </style>
 """, unsafe_allow_html=True)
 
 df_raw = load_and_clean_data()
 
 if df_raw is not None:
-    # On lance le calcul s'il n'est pas en cache
     if 'elo_data' not in st.session_state:
         st.session_state['elo_data'] = compute_elo_history(df_raw)
     
     df_elo = st.session_state['elo_data']
 
-    # --- SIDEBAR (CONTRÔLES) ---
+    # --- SIDEBAR (SÉLECTION COMPARATEUR) ---
     with st.sidebar:
         st.header("⚙️ Paramètres")
-        st.write("Filtrez les données pour explorer les époques.")
+        st.write("Choisissez les pilotes à comparer dans l'onglet 'All Time'.")
         
-        # Filtre Année
-        years_list = sorted(df_elo['Year'].unique(), reverse=True)
-        selected_year = st.selectbox("📅 Sélectionner une Saison", years_list, index=0)
-        
-        st.divider()
-        
-        # Filtre Pilotes (Pour le graph)
-        st.subheader("👥 Comparateur")
         all_drivers = sorted(df_elo['Driver'].unique())
-        default_selection = ["Michael Schumacher", "Lewis Hamilton", "Max Verstappen", "Ayrton Senna"]
-        # Filtrer pour ne garder que ceux qui existent
+        default_selection = ["Michael Schumacher", "Lewis Hamilton", "Max Verstappen", "Ayrton Senna", "Alain Prost", "Juan Manuel Fangio"]
         valid_defaults = [d for d in default_selection if d in all_drivers]
         
-        selected_drivers = st.multiselect("Ajouter des pilotes", all_drivers, default=valid_defaults)
+        selected_drivers = st.multiselect("Pilotes à comparer", all_drivers, default=valid_defaults)
+
+    # --- LES DEUX ONGLETS PRINCIPAUX ---
+    tab_all_time, tab_season = st.tabs(["🏛️ All Time & Légendes", "📅 Analyse par Saison"])
+
+    # =========================================================================
+    # ONGLET 1 : ALL TIME (Duel + GOAT + Peaks)
+    # =========================================================================
+    with tab_all_time:
+        st.write("") # Spacer
         
-        st.info("ℹ️ Le système Elo met à jour la note de chaque pilote après chaque course en fonction de la force de ses adversaires et de son coéquipier.")
-
-    # --- MAIN CONTENT ---
-
-    # 1. KPIs (Indicateurs Clés) pour l'année sélectionnée
-    data_year = df_elo[df_elo['Year'] == selected_year]
-    last_date = data_year['Date'].max()
-    final_rankings = data_year[data_year['Date'] == last_date].sort_values(by='Elo', ascending=False)
-    
-    if not final_rankings.empty:
-        top_driver = final_rankings.iloc[0]
+        # --- SECTION HAUTE : 2 COLONNES (DUEL vs RECORDS) ---
+        col_left, col_right = st.columns(2)
         
-        # Calcul de la progression du top pilote sur l'année
-        start_year_elo = data_year[data_year['Driver'] == top_driver['Driver']]['Elo'].iloc[0]
-        delta_elo = top_driver['Elo'] - start_year_elo
+        # COLONNE GAUCHE : DUEL AU SOMMET
+        with col_left:
+            st.subheader("⚔️ Duel au Sommet")
+            if selected_drivers:
+                chart_data = df_elo[df_elo['Driver'].isin(selected_drivers)].copy()
+                fig = px.line(chart_data, x='Date', y='Elo', color='Driver', 
+                              color_discrete_sequence=px.colors.qualitative.Bold)
+                
+                # Zoom intelligent
+                min_y = chart_data['Elo'].min() - 50
+                max_y = chart_data['Elo'].max() + 50
+                
+                fig.update_layout(
+                    height=400,
+                    margin=dict(l=10, r=10, t=30, b=10),
+                    yaxis_range=[min_y, max_y],
+                    showlegend=True,
+                    legend=dict(orientation="h", y=1.1, x=0)
+                )
+                st.plotly_chart(fig, use_container_width=True)
+            else:
+                st.info("Sélectionnez des pilotes dans la barre latérale.")
 
-        col1, col2, col3 = st.columns(3)
-        col1.metric("🏆 Champion Elo", top_driver['Driver'], f"{int(top_driver['Elo'])} pts")
-        col2.metric("📈 Progression Saison", f"{int(delta_elo)} pts", delta_color="normal")
-        col3.metric("🏎️ Écurie", top_driver['Team'])
-
-    # 2. LES ONGLETS
-    tab1, tab2, tab3 = st.tabs(["📉 Analyse Saison", "🏛️ Hall of Fame", "👑 Histoire du GOAT"])
-
-    with tab1:
-        st.subheader("Duel au Sommet")
-        
-        # Graphique
-        if selected_drivers:
-            chart_data = df_elo[df_elo['Driver'].isin(selected_drivers)].copy()
-            fig = px.line(chart_data, x='Date', y='Elo', color='Driver', 
-                          color_discrete_sequence=px.colors.qualitative.Bold)
+        # COLONNE DROITE : COURSE AU RECORD (GOAT)
+        with col_right:
+            st.subheader("⛰️ L'Histoire du Record (GOAT)")
             
-            fig.update_layout(
-                height=450,
-                xaxis_title="",
-                yaxis_title="Score Elo",
-                yaxis_range=[chart_data['Elo'].min() - 50, chart_data['Elo'].max() + 50],
+            # Calcul dynamique du record
+            df_sorted = df_elo.sort_values(by='Date')
+            goat_records = []
+            current_max = 0
+            for _, row in df_sorted.iterrows():
+                if row['Elo'] > current_max:
+                    current_max = row['Elo']
+                    goat_records.append(row)
+            df_goat = pd.DataFrame(goat_records)
+            
+            fig_goat = px.line(df_goat, x='Date', y='Elo', color='Driver', 
+                               line_shape='hv', markers=True) # hv = Escalier
+            
+            fig_goat.update_layout(
+                height=400,
+                margin=dict(l=10, r=10, t=30, b=10),
+                yaxis_range=[1500, df_goat['Elo'].max() + 50],
+                showlegend=True,
                 legend=dict(orientation="h", y=1.1, x=0),
-                margin=dict(l=20, r=20, t=20, b=20),
-                hovermode="x unified"
+                yaxis_title="Record Elo Absolu"
             )
-            st.plotly_chart(fig, use_container_width=True)
-        
-        st.subheader(f"Classement {selected_year}")
-        # Tableau avec barre de progression pour le Elo
-        st.dataframe(
-            final_rankings[['Driver', 'Team', 'Elo']].reset_index(drop=True),
-            use_container_width=True,
-            column_config={
-                "Elo": st.column_config.ProgressColumn(
-                    "Puissance Elo",
-                    format="%d",
-                    min_value=1400,
-                    max_value=2600,
-                ),
-            },
-            height=400
-        )
+            st.plotly_chart(fig_goat, use_container_width=True)
 
-    with tab2:
-        st.subheader("Les plus hauts sommets atteints")
-        # Calcul du Peak Elo
+        st.divider()
+
+        # --- SECTION BASSE : TABLEAU DES PICS ---
+        st.subheader("🏆 Les Plus Hauts Pics de Carrière (Peak Elo)")
+        
         idx = df_elo.groupby(['Driver'])['Elo'].idxmax()
         best_elo_df = df_elo.loc[idx].sort_values(by='Elo', ascending=False).reset_index(drop=True)
         best_elo_df.index += 1
@@ -237,39 +229,75 @@ if df_raw is not None:
                     format="%d",
                     min_value=1500,
                     max_value=2600,
-                    help="Le score maximum atteint au cours de la carrière"
                 ),
                 "Year": st.column_config.NumberColumn("Année du Pic", format="%d")
             },
-            height=800
+            height=500
         )
 
-    with tab3:
-        st.subheader("La Course au Record Absolu")
+    # =========================================================================
+    # ONGLET 2 : ANALYSE SAISON (Progression)
+    # =========================================================================
+    with tab_season:
+        # Sélecteur d'année spécifique à cet onglet
+        years_list = sorted(df_elo['Year'].unique(), reverse=True)
+        col_sel, col_kpi = st.columns([1, 3])
         
-        # Calcul GOAT
-        df_sorted = df_elo.sort_values(by='Date')
-        goat_records = []
-        current_max = 0
-        for _, row in df_sorted.iterrows():
-            if row['Elo'] > current_max:
-                current_max = row['Elo']
-                goat_records.append(row)
+        with col_sel:
+            selected_year = st.selectbox("📅 Choisir la saison à analyser", years_list)
         
-        df_goat = pd.DataFrame(goat_records)
+        # Filtrer les données pour cette année
+        data_year = df_elo[df_elo['Year'] == selected_year].copy()
         
-        fig_goat = px.line(df_goat, x='Date', y='Elo', color='Driver', line_shape='hv', markers=True)
-        fig_goat.update_layout(height=500, yaxis_title="Record Elo", showlegend=True)
-        st.plotly_chart(fig_goat, use_container_width=True)
+        # KPIs
+        last_date = data_year['Date'].max()
+        final_rankings = data_year[data_year['Date'] == last_date].sort_values(by='Elo', ascending=False)
+        top_driver = final_rankings.iloc[0]
         
+        with col_kpi:
+            c1, c2, c3 = st.columns(3)
+            c1.metric("Champion Elo", top_driver['Driver'])
+            c2.metric("Score Final", f"{int(top_driver['Elo'])}")
+            c3.metric("Écurie", top_driver['Team'])
+
+        st.subheader(f"📈 Progression sur la saison {selected_year}")
+        
+        # Pour ne pas avoir un graphique spaghetti avec 20 pilotes, 
+        # on affiche automatiquement le Top 10 de cette année + les pilotes sélectionnés dans la sidebar
+        top_10_drivers = final_rankings.head(10)['Driver'].tolist()
+        drivers_to_plot = list(set(top_10_drivers + selected_drivers)) # Union sans doublons
+        
+        # Filtrer pour le graph
+        chart_data_season = data_year[data_year['Driver'].isin(drivers_to_plot)].copy()
+        
+        fig_season = px.line(chart_data_season, x='Date', y='Elo', color='Driver',
+                             title=f"Bataille pour le titre {selected_year} (Top 10 + Sélection)",
+                             markers=True)
+        
+        # Zoom sur l'année
+        min_y_s = chart_data_season['Elo'].min() - 20
+        max_y_s = chart_data_season['Elo'].max() + 20
+        
+        fig_season.update_layout(
+            height=500,
+            yaxis_range=[min_y_s, max_y_s],
+            hovermode="x unified"
+        )
+        st.plotly_chart(fig_season, use_container_width=True)
+        
+        st.subheader("Classement Final")
         st.dataframe(
-            df_goat[['Date', 'Driver', 'Elo', 'Team']].sort_values(by='Elo', ascending=False).reset_index(drop=True),
+            final_rankings[['Driver', 'Team', 'Elo']].reset_index(drop=True),
             use_container_width=True,
             column_config={
-                "Date": st.column_config.DateColumn("Date du Record"),
-                "Elo": st.column_config.NumberColumn("Nouveau Record", format="%d")
+                "Elo": st.column_config.ProgressColumn(
+                    "Puissance Elo",
+                    format="%d",
+                    min_value=1400,
+                    max_value=2600,
+                ),
             }
         )
 
 else:
-    st.warning("En attente des données...")
+    st.warning("Chargement des données...")
