@@ -171,21 +171,21 @@ st.markdown("""
 
     /* 2. SELECTEUR DE PILOTES (Make it Clean) */
     
-    /* Le conteneur des tags */
+    /* Le conteneur des tags : FOND BLANC */
     div[data-baseweb="select"] > div {
-        background-color: #f8f9fa;
+        background-color: #ffffff; 
         border-radius: 8px;
         border: 1px solid #e0e0e0;
     }
 
-    /* Les Tags eux-mêmes (Pillules compactes) */
+    /* Les Tags : NOUVEAU BLEU */
     span[data-baseweb="tag"] {
-        background-color: #e7f2fa !important; /* Bleu très pâle */
-        color: #0c5460 !important; /* Texte bleu foncé */
+        background-color: #DBE6F7 !important; /* Le nouveau bleu demandé */
+        color: #0c5460 !important;
         border: 1px solid #bee5eb;
-        border-radius: 20px !important; /* Arrondi prononcé */
-        padding: 2px 10px !important; /* Compact */
-        font-size: 14px !important; /* Texte un peu plus petit */
+        border-radius: 20px !important;
+        padding: 2px 10px !important;
+        font-size: 14px !important;
         margin-top: 2px !important;
         margin-bottom: 2px !important;
     }
@@ -233,16 +233,15 @@ if df_raw is not None:
         col_graph, col_select = st.columns([3.5, 1])
         
         with col_select:
-            # Titre manuel plus propre que le label du widget
-            st.markdown("##### 🏎️ Ajouter des pilotes")
+            # Titre sans Emoji
+            st.markdown("##### Ajouter des pilotes")
             
             all_drivers = sorted(df_elo['Driver'].unique())
             default_selection = ["Michael Schumacher", "Lewis Hamilton", "Max Verstappen", "Ayrton Senna", "Juan Manuel Fangio"]
             valid_defaults = [d for d in default_selection if d in all_drivers]
             
-            # Label collapsed pour éviter le doublon et gagner de la place
             selected_drivers = st.multiselect(
-                "Select Drivers", # Hidden label
+                "Select Drivers", 
                 all_drivers, 
                 default=valid_defaults, 
                 label_visibility="collapsed"
