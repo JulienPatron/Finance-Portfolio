@@ -359,7 +359,7 @@ if df_raw is not None:
         )
         st.plotly_chart(fig_season, use_container_width=True)
         
-        st.subheader("Internal Domination")
+        st.subheader("Internal Domination - (Driver vs Teammate)")
         st.dataframe(
             gap_df[['Driver', 'Team', 'Elo', 'Gap', 'Vs_Mate']].reset_index(drop=True),
             use_container_width=True,
