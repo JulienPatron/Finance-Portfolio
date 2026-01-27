@@ -143,14 +143,17 @@ st.title("F1 Elo Rating System")
 # === CSS PERSONNALISÉ (DESIGN) ===
 st.markdown("""
 <style>
-    /* 1. ONGLETS (TABS) PLUS VISIBLES */
+    /* 1. ONGLETS (TABS) - suppression de la barre rouge animée */
     div[data-baseweb="tab-list"] {
         gap: 10px;
         margin-bottom: 20px;
     }
+    div[data-baseweb="tab-highlight"] {
+        display: none; /* Cache la barre qui bouge */
+    }
     button[data-baseweb="tab"] {
-        font-size: 20px !important; /* Gros texte */
-        font-weight: 700 !important; /* Gras */
+        font-size: 20px !important;
+        font-weight: 700 !important;
         padding: 10px 30px !important;
         background-color: #f0f2f6;
         border-radius: 8px;
@@ -158,15 +161,17 @@ st.markdown("""
     }
     button[data-baseweb="tab"][aria-selected="true"] {
         background-color: #ffffff !important;
-        border-color: #ff4b4b !important; /* Bordure rouge active */
+        border-color: #ff4b4b !important;
         color: #ff4b4b !important;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
 
-    /* 2. TAGS (SÉLECTEUR PILOTES) - RAPPEL COULEUR ST.INFO */
+    /* 2. TAGS (SÉLECTEUR PILOTES) - BLEU PÂLE */
     span[data-baseweb="tag"] {
-        background-color: #0068C9 !important; /* Le Bleu "Info" de Streamlit */
+        background-color: #749BC2 !important; /* Bleu pale doux */
         color: white !important;
         font-weight: 500;
+        border: 1px solid #5A7B9C;
     }
 
     /* 3. METRICS */
@@ -189,14 +194,14 @@ if df_raw is not None:
         st.info("""
         **Principe Elo :**
         Chaque pilote commence a 1500 points.
-        Apres chaque course, des points sont echanges.
+        Apres chaque course, des points sont echanges en fonction des performances.
         """)
         st.markdown("""
-        **1. Facteur Coequipier (K=32)**
-        Duel prioritaire. Divise si plusieurs coequipiers.
+        **1. Facteur Coequipier**
+        Grosse ponderation. Le score evolue fortement selon la position d'arrivee par rapport au coequipier.
         
-        **2. Facteur Field (K=5)**
-        Performance globale face a la grille.
+        **2. Facteur Field**
+        Ponderation plus faible. Cela permet de situer le niveau global de la voiture (les bons pilotes ont souvent les bonnes voitures).
         """)
 
     # --- TABS ---
@@ -211,7 +216,8 @@ if df_raw is not None:
         with col_select:
             st.write("Ajouter des pilotes")
             all_drivers = sorted(df_elo['Driver'].unique())
-            default_selection = ["Michael Schumacher", "Lewis Hamilton", "Max Verstappen", "Ayrton Senna", "Alain Prost", "Juan Manuel Fangio"]
+            # Prost retiré de la liste par défaut
+            default_selection = ["Michael Schumacher", "Lewis Hamilton", "Max Verstappen", "Ayrton Senna", "Juan Manuel Fangio"]
             valid_defaults = [d for d in default_selection if d in all_drivers]
             selected_drivers = st.multiselect("Recherche", all_drivers, default=valid_defaults, label_visibility="collapsed")
             
