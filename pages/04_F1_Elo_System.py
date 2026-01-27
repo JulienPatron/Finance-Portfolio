@@ -141,7 +141,7 @@ def calculate_teammate_gaps(final_rankings):
 # === CSS PERSONNALISÉ (DESIGN) ===
 st.markdown("""
 <style>
-    /* 0. REMONTER LE TITRE (Suppression de la marge haute par défaut) */
+    /* 0. REMONTER LE TITRE */
     .block-container {
         padding-top: 2rem;
     }
@@ -169,11 +169,25 @@ st.markdown("""
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
 
-    /* 2. TAGS (SÉLECTEUR PILOTES) - COULEUR EXACTE DU ST.INFO */
+    /* 2. SELECTEUR DE PILOTES (Make it Clean) */
+    
+    /* Le conteneur des tags */
+    div[data-baseweb="select"] > div {
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        border: 1px solid #e0e0e0;
+    }
+
+    /* Les Tags eux-mêmes (Pillules compactes) */
     span[data-baseweb="tag"] {
-        background-color: #e7f2fa !important; /* Bleu très pâle (standard st.info) */
-        color: #0c5460 !important; /* Texte bleu foncé pour contraste */
-        border: 1px solid #bee5eb; /* Bordure subtile */
+        background-color: #e7f2fa !important; /* Bleu très pâle */
+        color: #0c5460 !important; /* Texte bleu foncé */
+        border: 1px solid #bee5eb;
+        border-radius: 20px !important; /* Arrondi prononcé */
+        padding: 2px 10px !important; /* Compact */
+        font-size: 14px !important; /* Texte un peu plus petit */
+        margin-top: 2px !important;
+        margin-bottom: 2px !important;
     }
 
     /* 3. METRICS */
@@ -215,25 +229,37 @@ if df_raw is not None:
     with tab_all_time:
         st.subheader("Comparateur de Pilotes")
         
-        col_graph, col_select = st.columns([3, 1])
+        # On ajuste les proportions pour donner de l'air
+        col_graph, col_select = st.columns([3.5, 1])
         
         with col_select:
-            st.write("Ajouter des pilotes")
+            # Titre manuel plus propre que le label du widget
+            st.markdown("##### 🏎️ Ajouter des pilotes")
+            
             all_drivers = sorted(df_elo['Driver'].unique())
-            # Prost retiré de la liste par défaut
             default_selection = ["Michael Schumacher", "Lewis Hamilton", "Max Verstappen", "Ayrton Senna", "Juan Manuel Fangio"]
             valid_defaults = [d for d in default_selection if d in all_drivers]
-            selected_drivers = st.multiselect("Recherche", all_drivers, default=valid_defaults, label_visibility="collapsed")
+            
+            # Label collapsed pour éviter le doublon et gagner de la place
+            selected_drivers = st.multiselect(
+                "Select Drivers", # Hidden label
+                all_drivers, 
+                default=valid_defaults, 
+                label_visibility="collapsed"
+            )
             
         with col_graph:
             if selected_drivers:
                 chart_data = df_elo[df_elo['Driver'].isin(selected_drivers)].copy()
                 fig = px.line(chart_data, x='Date', y='Elo', color='Driver', 
                               color_discrete_sequence=px.colors.qualitative.Bold)
+                
                 fig.update_layout(
-                    height=500, margin=dict(l=10, r=10, t=10, b=10),
+                    height=500, 
+                    margin=dict(l=10, r=10, t=10, b=10),
                     yaxis_range=[chart_data['Elo'].min() - 50, chart_data['Elo'].max() + 50],
-                    showlegend=True, legend=dict(orientation="h", y=-0.15, x=0)
+                    showlegend=True, 
+                    legend=dict(orientation="h", y=-0.15, x=0)
                 )
                 st.plotly_chart(fig, use_container_width=True)
             else:
