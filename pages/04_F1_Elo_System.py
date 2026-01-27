@@ -140,36 +140,38 @@ def calculate_teammate_gaps(final_rankings):
 
 st.title("F1 Elo Rating System")
 
-# CSS PERSONNALISÉ (DESIGN SYSTEM)
+# === CSS PERSONNALISÉ (DESIGN) ===
 st.markdown("""
 <style>
-    div[data-testid="stMetricValue"] { font-size: 24px; }
-    
-    /* 1. STYLISATION DES ONGLETS (TABS) */
-    .stTabs [data-baseweb="tab-list"] {
+    /* 1. ONGLETS (TABS) PLUS VISIBLES */
+    div[data-baseweb="tab-list"] {
         gap: 10px;
         margin-bottom: 20px;
     }
-    .stTabs [data-baseweb="tab"] {
-        height: 50px;
-        white-space: pre-wrap;
-        background-color: #F0F2F6;
-        border-radius: 5px;
-        color: #31333F;
-        font-weight: 600;
-        padding: 0px 20px; 
+    button[data-baseweb="tab"] {
+        font-size: 20px !important; /* Gros texte */
+        font-weight: 700 !important; /* Gras */
+        padding: 10px 30px !important;
+        background-color: #f0f2f6;
+        border-radius: 8px;
+        border: 1px solid #e0e0e0;
     }
-    /* Onglet Actif */
-    .stTabs [aria-selected="true"] {
-        background-color: #2E3B4E !important;
-        color: white !important;
+    button[data-baseweb="tab"][aria-selected="true"] {
+        background-color: #ffffff !important;
+        border-color: #ff4b4b !important; /* Bordure rouge active */
+        color: #ff4b4b !important;
     }
 
-    /* 2. STYLISATION DES TAGS DU SELECTEUR */
+    /* 2. TAGS (SÉLECTEUR PILOTES) - RAPPEL COULEUR ST.INFO */
     span[data-baseweb="tag"] {
-        background-color: #2E3B4E !important;
+        background-color: #0068C9 !important; /* Le Bleu "Info" de Streamlit */
         color: white !important;
-        border: 1px solid #4A5568;
+        font-weight: 500;
+    }
+
+    /* 3. METRICS */
+    div[data-testid="stMetricValue"] { 
+        font-size: 26px; 
     }
 </style>
 """, unsafe_allow_html=True)
@@ -184,16 +186,11 @@ if df_raw is not None:
     # --- SIDEBAR ---
     with st.sidebar:
         st.header("Methode de Calcul")
-        
-        # BLOC INFO PERSONNALISÉ (RAPPEL COULEUR DU SELECTEUR)
-        st.markdown("""
-        <div style="background-color: #2E3B4E; color: white; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
-            <strong>Principe Elo :</strong><br>
-            Chaque pilote commence a 1500 points.
-            Apres chaque course, des points sont echanges.
-        </div>
-        """, unsafe_allow_html=True)
-        
+        st.info("""
+        **Principe Elo :**
+        Chaque pilote commence a 1500 points.
+        Apres chaque course, des points sont echanges.
+        """)
         st.markdown("""
         **1. Facteur Coequipier (K=32)**
         Duel prioritaire. Divise si plusieurs coequipiers.
@@ -202,34 +199,29 @@ if df_raw is not None:
         Performance globale face a la grille.
         """)
 
+    # --- TABS ---
     tab_all_time, tab_season = st.tabs(["All Time", "Par Saison"])
 
     # --- TAB 1 : ALL TIME ---
     with tab_all_time:
         st.subheader("Comparateur de Pilotes")
         
-        # Layout : Graphique (75%) | Selecteur (25%)
         col_graph, col_select = st.columns([3, 1])
         
-        # COLONNE DE DROITE (SELECTEUR) - D'abord pour définir la sélection
         with col_select:
-            # CONTAINER HAUTEUR FIXE POUR DESCENDRE JUSQU'EN BAS
-            with st.container(height=400, border=True):
-                st.markdown("### Choix Pilotes")
-                all_drivers = sorted(df_elo['Driver'].unique())
-                default_selection = ["Michael Schumacher", "Lewis Hamilton", "Max Verstappen", "Ayrton Senna", "Alain Prost", "Juan Manuel Fangio"]
-                valid_defaults = [d for d in default_selection if d in all_drivers]
-                selected_drivers = st.multiselect("Recherche", all_drivers, default=valid_defaults, label_visibility="collapsed")
-        
-        # COLONNE DE GAUCHE (GRAPHIQUE)
+            st.write("Ajouter des pilotes")
+            all_drivers = sorted(df_elo['Driver'].unique())
+            default_selection = ["Michael Schumacher", "Lewis Hamilton", "Max Verstappen", "Ayrton Senna", "Alain Prost", "Juan Manuel Fangio"]
+            valid_defaults = [d for d in default_selection if d in all_drivers]
+            selected_drivers = st.multiselect("Recherche", all_drivers, default=valid_defaults, label_visibility="collapsed")
+            
         with col_graph:
             if selected_drivers:
                 chart_data = df_elo[df_elo['Driver'].isin(selected_drivers)].copy()
                 fig = px.line(chart_data, x='Date', y='Elo', color='Driver', 
                               color_discrete_sequence=px.colors.qualitative.Bold)
-                # On ajuste la hauteur pour matcher le container de droite (400px)
                 fig.update_layout(
-                    height=400, margin=dict(l=10, r=10, t=10, b=10),
+                    height=500, margin=dict(l=10, r=10, t=10, b=10),
                     yaxis_range=[chart_data['Elo'].min() - 50, chart_data['Elo'].max() + 50],
                     showlegend=True, legend=dict(orientation="h", y=-0.15, x=0)
                 )
