@@ -9,7 +9,6 @@ st.set_page_config(layout="wide", page_title="Julien Patron - Portfolio")
 portfolio_page = st.Page(
     "01_Portfolio_Optimizer.py", 
     title="Portfolio Optimizer",
-    icon="💰",
     default=True
 )
 
@@ -17,14 +16,12 @@ portfolio_page = st.Page(
 movie_page = st.Page(
     "pages/03_Movie_Recommendation_System.py", 
     title="Movie Recommendation System",
-    icon="🎬"
 )
 
 # 3. F1 Elo System (Sport / Data) - LE NOUVEAU PROJET
 f1_page = st.Page(
     "pages/04_F1_Elo_System.py",
     title="F1 Elo Rating System",
-    icon="🏎️"
 )
 
 # --- CRÉATION DE LA NAVIGATION (GROUPÉE) ---
