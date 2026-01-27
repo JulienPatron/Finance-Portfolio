@@ -2,9 +2,7 @@ import streamlit as st
 import yfinance as yf
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
-import matplotlib.ticker as mtick
+import plotly.graph_objects as go
 import datetime
 
 # --- CONFIGURATION DE LA PAGE ---
@@ -12,7 +10,6 @@ st.set_page_config(
     page_title="Project Portfolio - Julien Patron",
     layout="wide"
 )
-sns.set_theme(style="white", context="paper", font_scale=1.1)
 
 # --- CSS POUR UN LOOK PRO ---
 st.markdown("""
@@ -40,7 +37,7 @@ target_return = target_input / 100
 years_back = st.sidebar.slider("Historical Data (Years)", min_value=1, max_value=10, value=5)
 
 # D. Simulation Settings
-n_simulations = 10000
+n_simulations = 5000 # Réduit légèrement pour la vitesse, suffisant pour la démo
 
 # ==============================================================================
 # 2. LOGIQUE PRINCIPALE
@@ -55,12 +52,14 @@ with st.spinner('Processing market data...'):
     end_date = datetime.date.today()
     start_date = end_date - datetime.timedelta(days=years_back*365)
     
-    # Risk Free Rate (Dynamic)
+    # Risk Free Rate (Optimisé: valeur par défaut rapide si échec)
+    rf_rate = 0.04
     try:
         tnx = yf.Ticker("^TNX").history(period="5d")
-        rf_rate = tnx['Close'].iloc[-1] / 100 if not tnx.empty else 0.04
+        if not tnx.empty:
+            rf_rate = tnx['Close'].iloc[-1] / 100
     except:
-        rf_rate = 0.04
+        pass
         
     st.sidebar.markdown("---")
     st.sidebar.metric("Risk-Free Rate (10Y US Bond)", f"{rf_rate:.2%}")
@@ -82,13 +81,7 @@ with st.spinner('Processing market data...'):
         st.error(f"Data Error: {e}")
         st.stop()
 
-    # --- MONTE CARLO ENGINE ---
-    sim_rets = np.zeros(n_simulations)
-    sim_vols = np.zeros(n_simulations)
-    sim_sharpes = np.zeros(n_simulations)
-    sim_weights = np.zeros((n_simulations, num_assets))
-
-    # Optimisation vectorisée
+    # --- MONTE CARLO ENGINE (Optimisé numpy) ---
     weights = np.random.random((n_simulations, num_assets))
     weights /= np.sum(weights, axis=1)[:, np.newaxis]
     
@@ -116,15 +109,14 @@ with st.spinner('Processing market data...'):
     # 3. AFFICHAGE DES RÉSULTATS
     # ==============================================================================
     
-    # --- SECTION 1: STRATEGIC REPORT (Moved to Top) ---
+    # --- SECTION 1: STRATEGIC REPORT ---
     st.subheader("1. Allocation Report")
     
     col1, col2, col3, col4 = st.columns(4)
-    
-    col1.metric("Risk-Free Asset (10Y US Bond)", f"{w_cash:.1%}")
+    col1.metric("Risk-Free Asset", f"{w_cash:.1%}")
     col2.metric("Equity Allocation", f"{w_invest:.1%}")
-    col3.metric("Expected Return (Target)", f"{target_return:.1%}")
-    col4.metric("Est. Annual Volatility", f"{client_vol:.1%}")
+    col3.metric("Expected Return", f"{target_return:.1%}")
+    col4.metric("Est. Volatility", f"{client_vol:.1%}")
 
     st.write("#### Equity Composition")
     df_final = pd.DataFrame({
@@ -133,62 +125,102 @@ with st.spinner('Processing market data...'):
         "Final Portfolio Weight": tan_weights * w_invest
     }).sort_values(by="Final Portfolio Weight", ascending=False)
     
-    df_display = df_final.copy()
-    df_display["Tangency Weight"] = df_display["Tangency Weight"].apply(lambda x: f"{x:.1%}")
-    df_display["Final Portfolio Weight"] = df_display["Final Portfolio Weight"].apply(lambda x: f"{x:.1%}")
-    st.dataframe(df_display, use_container_width=True, hide_index=True)
+    st.dataframe(
+        df_final.style.format("{:.1%}"), 
+        use_container_width=True, 
+        hide_index=True
+    )
 
     st.markdown("---")
 
-    # --- SECTION 2: EFFICIENT FRONTIER (Moved below) ---
+    # --- SECTION 2: EFFICIENT FRONTIER (PLOTLY VERSION) ---
     st.subheader("2. Efficient Frontier & Capital Allocation")
     
-    # On crée un figure plus large (width=12) pour qu'elle prenne toute la place
-    fig, ax = plt.subplots(figsize=(12, 6))
+    # Préparation des données pour Plotly
+    # On limite le nombre de points affichés pour la perf si nécessaire, mais 5000 ça passe large
     
-    # Cloud
-    sc = ax.scatter(sim_vols, sim_rets, c=sim_sharpes, cmap='RdYlGn', s=3, alpha=0.5, rasterized=True)
+    fig = go.Figure()
+
+    # 1. Nuage de points (Monte Carlo)
+    fig.add_trace(go.Scatter(
+        x=sim_vols, y=sim_rets,
+        mode='markers',
+        marker=dict(
+            size=5,
+            color=sim_sharpes,
+            colorscale='RdYlGn',
+            showscale=True,
+            colorbar=dict(title="Sharpe Ratio")
+        ),
+        name='Simulations',
+        text=[f"Vol: {v:.1%}<br>Ret: {r:.1%}" for v, r in zip(sim_vols, sim_rets)],
+        hoverinfo='text'
+    ))
+
+    # 2. Capital Allocation Line (CAL)
+    # Calcul de la ligne max
+    max_vol_display = max(sim_vols.max(), client_vol) * 1.2
+    cal_x = [0, max_vol_display]
+    cal_y = [rf_rate, rf_rate + tan_sharpe * max_vol_display]
     
-    # Scale fix
+    fig.add_trace(go.Scatter(
+        x=cal_x, y=cal_y,
+        mode='lines',
+        line=dict(color='gray', width=2, dash='dash'),
+        name='Capital Allocation Line'
+    ))
+
+    # 3. Points clés (Risk Free, Tangency, Target)
+    fig.add_trace(go.Scatter(
+        x=[0], y=[rf_rate],
+        mode='markers+text',
+        marker=dict(color='black', size=12, symbol='diamond'),
+        text=[f"Risk-Free<br>{rf_rate:.1%}"],
+        textposition="bottom right",
+        name='Risk-Free'
+    ))
+
+    fig.add_trace(go.Scatter(
+        x=[tan_vol], y=[tan_ret],
+        mode='markers+text',
+        marker=dict(color='red', size=15, symbol='star'),
+        text=["Tangency Portfolio"],
+        textposition="top left",
+        name='Tangency'
+    ))
+
+    fig.add_trace(go.Scatter(
+        x=[client_vol], y=[target_return],
+        mode='markers+text',
+        marker=dict(color='blue', size=12, symbol='x'),
+        text=[f"Target<br>{target_return:.1%}"],
+        textposition="bottom right",
+        name='Target'
+    ))
+
+    # 4. Actifs individuels
     stock_vols = np.sqrt(np.diag(cov_matrix))
     stock_rets = mean_returns.values
-    max_stock_vol = np.max(stock_vols)
-    max_x = max(tan_vol, client_vol, max_stock_vol) * 1.15
-    
-    # CAL
-    ax.plot([0, max_x], [rf_rate, rf_rate + tan_sharpe * max_x], color='#555555', linestyle='--', linewidth=1, alpha=0.8, label='Capital Allocation Line')
-    
-    # Points
-    ax.scatter(0, rf_rate, c='black', marker='_', s=200, linewidth=2)
-    ax.text(0.002, rf_rate, f'Risk-Free ({rf_rate:.1%})', fontsize=9, fontweight='bold', va='bottom')
+    fig.add_trace(go.Scatter(
+        x=stock_vols, y=stock_rets,
+        mode='markers+text',
+        marker=dict(color='black', size=8),
+        text=tickers,
+        textposition="top center",
+        name='Assets'
+    ))
 
-    ax.scatter(tan_vol, tan_ret, c='#D90429', marker='+', s=150, linewidth=1.5, zorder=10)
-    ax.text(tan_vol, tan_ret+0.005, 'Tangency Portfolio', fontsize=9, fontweight='bold', color='#D90429', ha='right', va='bottom')
+    fig.update_layout(
+        xaxis_title="Annualized Volatility (Risk)",
+        yaxis_title="Annualized Return",
+        xaxis=dict(tickformat=".0%"),
+        yaxis=dict(tickformat=".0%"),
+        height=600,
+        margin=dict(l=20, r=20, t=20, b=20),
+        legend=dict(x=0, y=1, bgcolor='rgba(255,255,255,0.5)')
+    )
 
-    ax.scatter(client_vol, target_return, c='#0077B6', marker='x', s=100, linewidth=1.5, zorder=10)
-    ax.text(client_vol, target_return+0.005, f'Target ({target_return:.1%})', fontsize=9, fontweight='bold', color='#0077B6', ha='right', va='bottom')
-
-    # Stocks
-    ax.scatter(stock_vols, stock_rets, c='black', marker='x', s=50, zorder=15)
-    for i, txt in enumerate(tickers):
-        ax.text(stock_vols[i], stock_rets[i]+0.005, f' {txt}', fontsize=9, fontweight='bold', va='bottom')
-
-    # Format
-    ax.set_xlabel('Annualized Volatility (Risk)')
-    ax.set_ylabel('Annualized Return')
-    ax.xaxis.set_major_formatter(mtick.PercentFormatter(1.0, decimals=0))
-    ax.yaxis.set_major_formatter(mtick.PercentFormatter(1.0, decimals=0))
-    ax.set_xlim(0, max_x)
-    ax.set_ylim(bottom=0)
-    ax.grid(True, alpha=0.2)
-    
-    # Legend & Colorbar
-    ax.legend(loc='upper left', fontsize=8, frameon=True, framealpha=0.95, edgecolor='#E0E0E0')
-    cbar = plt.colorbar(sc, ax=ax)
-    cbar.set_label('Sharpe Ratio')
-    
-    # use_container_width=True force le graphique à prendre toute la largeur
-    st.pyplot(fig, use_container_width=True)
+    st.plotly_chart(fig, use_container_width=True)
 
     st.markdown("---")
 
@@ -202,14 +234,21 @@ with st.spinner('Processing market data...'):
             'Return': mean_returns,
             'Volatility': stock_vols_series
         })
-        # Format
-        df_metrics_disp = df_metrics.copy()
-        df_metrics_disp['Return'] = df_metrics_disp['Return'].apply(lambda x: f"{x:.1%}")
-        df_metrics_disp['Volatility'] = df_metrics_disp['Volatility'].apply(lambda x: f"{x:.1%}")
-        st.dataframe(df_metrics_disp, use_container_width=True)
+        st.dataframe(df_metrics.style.format("{:.1%}"), use_container_width=True)
 
     with col_corr:
         st.subheader("4. Correlation Matrix")
-        fig_corr, ax_corr = plt.subplots(figsize=(8, 6))
-        sns.heatmap(returns.corr(), annot=True, cmap='coolwarm', fmt=".2f", linewidths=0.5, vmin=-1, vmax=1, ax=ax_corr)
-        st.pyplot(fig_corr)
+        # Remplacement de Seaborn par Plotly Heatmap (plus léger)
+        corr = returns.corr()
+        fig_corr = go.Figure(data=go.Heatmap(
+            z=corr.values,
+            x=corr.columns,
+            y=corr.index,
+            colorscale='RdBu',
+            zmin=-1, zmax=1,
+            text=np.round(corr.values, 2),
+            texttemplate="%{text}",
+            showscale=False
+        ))
+        fig_corr.update_layout(height=400, margin=dict(l=0, r=0, t=0, b=0))
+        st.plotly_chart(fig_corr, use_container_width=True)
