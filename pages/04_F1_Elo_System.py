@@ -178,13 +178,13 @@ st.markdown("""
         border: 1px solid #e0e0e0;
         /* HAUTEUR FORCÉE POUR MATCHER LE GRAPHIQUE */
         min-height: 350px !important; 
-        align-items: flex-start !important; /* Pour que les tags restent en haut */
+        align-items: flex-start !important;
     }
 
     /* Les Tags (Pilules) */
     span[data-baseweb="tag"] {
-        background-color: #DBE6F7 !important; /* Fond Bleu pale */
-        color: #095AA7 !important; /* Texte Bleu Foncé Spécifique demandé */
+        background-color: #DBE6F7 !important; /* Bleu pale */
+        color: #095AA7 !important; /* Bleu Roi Foncé */
         border: 1px solid #bee5eb;
         border-radius: 20px !important;
         padding: 2px 10px !important;
@@ -232,7 +232,6 @@ if df_raw is not None:
     with tab_all_time:
         st.subheader("Comparateur de Pilotes")
         
-        # Colonnes: 3.5 pour le graph, 1 pour le sélecteur
         col_graph, col_select = st.columns([3.5, 1])
         
         with col_select:
@@ -255,9 +254,9 @@ if df_raw is not None:
                 fig = px.line(chart_data, x='Date', y='Elo', color='Driver', 
                               color_discrete_sequence=px.colors.qualitative.Bold)
                 
-                # Hauteur fixée à 500px pour matcher le CSS du sélecteur
+                # Hauteur fixée à 350px pour matcher le CSS du sélecteur
                 fig.update_layout(
-                    height=500, 
+                    height=350, 
                     margin=dict(l=10, r=10, t=10, b=10),
                     yaxis_range=[chart_data['Elo'].min() - 50, chart_data['Elo'].max() + 50],
                     showlegend=True, 
