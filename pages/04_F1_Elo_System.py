@@ -257,7 +257,7 @@ if df_raw is not None:
                 
                 # Hauteur fixée à 500px pour matcher le CSS du sélecteur
                 fig.update_layout(
-                    height=500, 
+                    height=350, 
                     margin=dict(l=10, r=10, t=10, b=10),
                     yaxis_range=[chart_data['Elo'].min() - 50, chart_data['Elo'].max() + 50],
                     showlegend=True, 
