@@ -138,18 +138,21 @@ def calculate_teammate_gaps(final_rankings):
 
 # --- 5. INTERFACE ---
 
-st.title("F1 Elo Rating System")
-
 # === CSS PERSONNALISÉ (DESIGN) ===
 st.markdown("""
 <style>
-    /* 1. ONGLETS (TABS) - suppression de la barre rouge animée */
+    /* 0. REMONTER LE TITRE (Suppression de la marge haute par défaut) */
+    .block-container {
+        padding-top: 2rem;
+    }
+
+    /* 1. ONGLETS (TABS) */
     div[data-baseweb="tab-list"] {
         gap: 10px;
         margin-bottom: 20px;
     }
     div[data-baseweb="tab-highlight"] {
-        display: none; /* Cache la barre qui bouge */
+        display: none;
     }
     button[data-baseweb="tab"] {
         font-size: 20px !important;
@@ -166,12 +169,11 @@ st.markdown("""
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
 
-    /* 2. TAGS (SÉLECTEUR PILOTES) - BLEU PÂLE */
+    /* 2. TAGS (SÉLECTEUR PILOTES) - COULEUR EXACTE DU ST.INFO */
     span[data-baseweb="tag"] {
-        background-color: #749BC2 !important; /* Bleu pale doux */
-        color: white !important;
-        font-weight: 500;
-        border: 1px solid #5A7B9C;
+        background-color: #e7f2fa !important; /* Bleu très pâle (standard st.info) */
+        color: #0c5460 !important; /* Texte bleu foncé pour contraste */
+        border: 1px solid #bee5eb; /* Bordure subtile */
     }
 
     /* 3. METRICS */
@@ -180,6 +182,8 @@ st.markdown("""
     }
 </style>
 """, unsafe_allow_html=True)
+
+st.title("F1 Elo Rating System")
 
 df_raw = load_and_clean_data()
 
