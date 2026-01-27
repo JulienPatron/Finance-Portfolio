@@ -1,36 +1,53 @@
 import streamlit as st
 
-# --- CONFIGURATION DU ROUTEUR ---
-st.set_page_config(layout="wide", page_title="Julien Patron - Portfolio")
+# --- 1. CONFIGURATION GLOBALE (Doit être la toute première commande) ---
+st.set_page_config(
+    page_title="Julien Patron - Portfolio",
+    layout="wide",
+    initial_sidebar_state="expanded" 
+)
 
-# --- DÉFINITION DES PAGES ---
+# --- 2. DÉFINITION DES PAGES ---
+# On définit les fichiers cibles. 
+# Note : title="" définit ce qui apparait dans le menu de navigation.
 
-# 1. Portfolio (Finance)
-portfolio_page = st.Page(
-    "01_Portfolio_Optimizer.py", 
-    title="Portfolio Optimizer",
+# Page d'accueil (Load instantané)
+home_page = st.Page(
+    "00_Home.py", 
+    title="Accueil", 
+    icon="🏠", 
     default=True
 )
 
-# 2. Movie System (Cinema)
+# Projet 1 : Finance
+finance_page = st.Page(
+    "01_Portfolio_Optimizer.py", 
+    title="Portfolio Optimizer", 
+    icon="📈"
+)
+
+# Projet 2 : Cinéma
 movie_page = st.Page(
     "pages/03_Movie_Recommendation_System.py", 
-    title="Movie Recommendation System",
+    title="Movie Recommender", 
+    icon="🎬"
 )
 
-# 3. F1 Elo System (Sport / Data) - LE NOUVEAU PROJET
+# Projet 3 : F1
 f1_page = st.Page(
-    "pages/04_F1_Elo_System.py",
-    title="F1 Elo Rating System",
+    "pages/04_F1_Elo_System.py", 
+    title="F1 Elo System", 
+    icon="🏎️"
 )
 
-# --- CRÉATION DE LA NAVIGATION (GROUPÉE) ---
+# --- 3. NAVIGATION ---
+# Regroupement logique dans la sidebar
 pg = st.navigation(
     {
-        "Finance": [portfolio_page],
-        "Other Projects": [f1_page, movie_page], # J'ai ajouté la page F1 ici
+        "Général": [home_page],
+        "Projets Data": [finance_page, movie_page, f1_page],
     }
 )
 
-# --- LANCEMENT ---
+# --- 4. EXÉCUTION ---
 pg.run()
