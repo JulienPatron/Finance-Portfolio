@@ -82,7 +82,6 @@ def compute_elo_history(df):
     
     races = df.groupby(['Year', 'Round', 'Date', 'GP_Name'], sort=False)
     
-    # Barre de progression discrète en sidebar (juste pour le chargement initial)
     prog_bar = st.sidebar.progress(0, text="Initialisation...")
     total_races = len(races)
     
@@ -140,11 +139,20 @@ def calculate_teammate_gaps(final_rankings):
 # --- 5. INTERFACE ---
 
 st.title("F1 Elo Rating System")
+
+# CSS PERSONNALISÉ POUR L'UNIFORMITÉ
 st.markdown("""
 <style>
     div[data-testid="stMetricValue"] { font-size: 24px; }
     .stTabs [data-baseweb="tab-list"] { gap: 24px; }
     .stTabs [data-baseweb="tab"] { font-weight: bold; }
+    
+    /* MODIFICATION DES COULEURS DU SELECTEUR (TAGS) */
+    span[data-baseweb="tag"] {
+        background-color: #2E3B4E !important; /* Un gris-bleu neutre et pro */
+        color: white !important;
+        border: 1px solid #4A5568;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -155,25 +163,20 @@ if df_raw is not None:
         st.session_state['elo_data'] = compute_elo_history(df_raw)
     df_elo = st.session_state['elo_data']
 
-    # --- SIDEBAR (METHODE DE CALCUL) ---
+    # --- SIDEBAR ---
     with st.sidebar:
         st.header("Methode de Calcul")
         st.info("""
         **Principe Elo :**
         Chaque pilote commence a 1500 points.
-        Apres chaque course, des points sont echanges entre les pilotes selon leurs resultats.
+        Apres chaque course, des points sont echanges.
         """)
-        
         st.markdown("""
         **1. Facteur Coequipier (K=32)**
-        Le duel interne est prioritaire. Battre son coequipier rapporte beaucoup de points.
-        *Si l'equipe a plusieurs pilotes, ce facteur est divise pour eviter l'inflation.*
+        Duel prioritaire. Divise si plusieurs coequipiers.
         
         **2. Facteur Field (K=5)**
-        Battre les pilotes des autres ecuries rapporte moins de points individuellement, mais permet de situer le niveau global de la voiture.
-        
-        **3. Historique**
-        L'algorithme rejoue l'integralite des courses depuis 1950 a chaque chargement pour construire les courbes.
+        Performance globale face a la grille.
         """)
 
     tab_all_time, tab_season = st.tabs(["All Time", "Par Saison"])
@@ -182,7 +185,6 @@ if df_raw is not None:
     with tab_all_time:
         st.subheader("Comparateur de Pilotes")
         
-        # Structure : Graphique (3/4) | Sélecteur (1/4)
         col_graph, col_select = st.columns([3, 1])
         
         with col_select:
@@ -204,14 +206,12 @@ if df_raw is not None:
                 )
                 st.plotly_chart(fig, use_container_width=True)
             else:
-                st.info("Veuillez selectionner des pilotes a droite.")
+                st.info("Selectionnez des pilotes.")
 
         st.divider()
         
-        # Structure : Histoire Record (1/2) | Plus Hauts Pics (1/2)
         col_goat, col_peak = st.columns(2)
 
-        # GAUCHE : HISTOIRE RECORD
         with col_goat:
             st.subheader("L'Histoire du Record")
             df_sorted = df_elo.sort_values(by='Date')
@@ -238,7 +238,6 @@ if df_raw is not None:
             )
             st.plotly_chart(fig_goat, use_container_width=True)
 
-        # DROITE : PICS CARRIERE
         with col_peak:
             st.subheader("Les Plus Hauts Pics")
             idx = df_elo.groupby(['Driver'])['Elo'].idxmax()
@@ -282,8 +281,6 @@ if df_raw is not None:
 
         st.subheader(f"Progression sur la saison {selected_year}")
         sorted_drivers_legend = final_rankings['Driver'].tolist()
-        
-        # Top 10 de la saison uniquement (plus besoin de la sélection globale)
         top_10_drivers = final_rankings.head(10)['Driver'].tolist()
         chart_data_season = data_year[data_year['Driver'].isin(top_10_drivers)].copy()
         
