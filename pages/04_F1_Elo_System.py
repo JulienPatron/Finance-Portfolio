@@ -138,7 +138,7 @@ def calculate_teammate_gaps(final_rankings):
 
 # --- 5. INTERFACE ---
 
-# === CSS PERSONNALISÉ (DESIGN) ===
+# === CSS PERSONNALISÉ (DESIGN DARK MODE COMPATIBLE) ===
 st.markdown("""
 <style>
     /* 0. REMONTER LE TITRE */
@@ -146,7 +146,7 @@ st.markdown("""
         padding-top: 2rem;
     }
 
-    /* 1. ONGLETS (TABS) */
+    /* 1. ONGLETS (TABS) - Utilisation de variables Streamlit pour l'adaptation auto */
     div[data-baseweb="tab-list"] {
         gap: 10px;
         margin-bottom: 20px;
@@ -158,12 +158,13 @@ st.markdown("""
         font-size: 20px !important;
         font-weight: 700 !important;
         padding: 10px 30px !important;
-        background-color: #f0f2f6;
+        background-color: var(--secondary-background-color); /* S'adapte au dark mode */
+        color: var(--text-color); /* S'adapte au dark mode */
         border-radius: 8px;
-        border: 1px solid #e0e0e0;
+        border: 1px solid rgba(128, 128, 128, 0.2); /* Bordure subtile compatible */
     }
     button[data-baseweb="tab"][aria-selected="true"] {
-        background-color: #ffffff !important;
+        background-color: var(--background-color) !important; /* Devient noir en dark mode */
         border-color: #ff4b4b !important;
         color: #ff4b4b !important;
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
@@ -171,17 +172,17 @@ st.markdown("""
 
     /* 2. SELECTEUR DE PILOTES (Make it Clean) */
     
-    /* Le conteneur des tags : FOND BLANC */
+    /* Le conteneur des tags : ADAPTATIF */
     div[data-baseweb="select"] > div {
-        background-color: #ffffff; 
+        background-color: var(--background-color); 
         border-radius: 8px;
-        border: 1px solid #e0e0e0;
+        border: 1px solid rgba(128, 128, 128, 0.2);
     }
 
-    /* Les Tags : NOUVEAU BLEU */
+    /* Les Tags : COULEURS FIXES (Car ce bleu marche sur fond noir ET blanc) */
     span[data-baseweb="tag"] {
-        background-color: #DBE6F7 !important; /* Le nouveau bleu demandé */
-        color: #095AA7 !important; /* Code couleur appliqué ici */
+        background-color: #DBE6F7 !important; 
+        color: #095AA7 !important;
         border: 1px solid #bee5eb;
         border-radius: 20px !important;
         padding: 2px 10px !important;
@@ -258,7 +259,11 @@ if df_raw is not None:
                     margin=dict(l=10, r=10, t=10, b=10),
                     yaxis_range=[chart_data['Elo'].min() - 50, chart_data['Elo'].max() + 50],
                     showlegend=True, 
-                    legend=dict(orientation="h", y=-0.15, x=0)
+                    legend=dict(orientation="h", y=-0.15, x=0),
+                    # TRANSPARENCE POUR DARK MODE
+                    paper_bgcolor="rgba(0,0,0,0)",
+                    plot_bgcolor="rgba(0,0,0,0)",
+                    font=dict(color="gray") # Couleur neutre qui marche sur les 2 fonds
                 )
                 st.plotly_chart(fig, use_container_width=True)
             else:
@@ -290,7 +295,10 @@ if df_raw is not None:
                 height=450, margin=dict(l=10, r=10, t=30, b=10),
                 yaxis_range=[1500, df_goat['Elo'].max() + 50],
                 showlegend=True, legend_title="Record Holders",
-                yaxis_title="Record Elo Absolu"
+                yaxis_title="Record Elo Absolu",
+                # TRANSPARENCE POUR DARK MODE
+                paper_bgcolor="rgba(0,0,0,0)",
+                plot_bgcolor="rgba(0,0,0,0)",
             )
             st.plotly_chart(fig_goat, use_container_width=True)
 
@@ -346,7 +354,10 @@ if df_raw is not None:
         )
         fig_season.update_layout(
             height=500, yaxis_range=[chart_data_season['Elo'].min() - 20, chart_data_season['Elo'].max() + 20],
-            hovermode="x unified"
+            hovermode="x unified",
+            # TRANSPARENCE POUR DARK MODE
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
         )
         st.plotly_chart(fig_season, use_container_width=True)
         
