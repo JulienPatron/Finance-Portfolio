@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import os
+import plotly.express as px # Import déplacé ici pour éviter les problèmes de portée
 
 # Note: No set_page_config, handled by main.py
 
@@ -183,10 +184,13 @@ def calculate_teammate_gaps(final_rankings):
 st.markdown("""
 <style>
     .block-container { padding-top: 1rem; }
-    /* Tabs Style */
-    button[data-baseweb="tab"] {
-        font-size: 16px !important;
-        font-weight: 600 !important;
+    /* Navigation Style - Simulates Tabs but stronger */
+    div[data-testid="stRadio"] > div {
+        display: flex;
+        justify-content: flex-start;
+        gap: 20px;
+        margin-bottom: 20px;
+        background-color: transparent;
     }
     /* Driver Tags */
     span[data-baseweb="tag"] {
@@ -220,11 +224,19 @@ if df_raw is not None:
         2. **Track Position (Low K):** Overall performance against the field.
         """)
 
-    # --- TABS ---
-    tab_all_time, tab_season = st.tabs(["All-Time History", "By Season"])
+    # --- NAVIGATION (REMPLACE LES TABS) ---
+    # Utilisation de st.radio horizontal pour persister l'état lors du changement d'année
+    nav_selection = st.radio(
+        "Navigation", 
+        ["All-Time History", "By Season"], 
+        horizontal=True,
+        label_visibility="collapsed"
+    )
 
-    # --- TAB 1 : ALL TIME ---
-    with tab_all_time:
+    st.divider()
+
+    # --- VIEW 1 : ALL TIME ---
+    if nav_selection == "All-Time History":
         st.subheader("Driver Comparator")
         
         col_graph, col_select = st.columns([3.5, 1])
@@ -238,9 +250,6 @@ if df_raw is not None:
             
         with col_graph:
             if selected_drivers:
-                # Lazy Import of Plotly
-                import plotly.express as px
-                
                 chart_data = df_elo[df_elo['Driver'].isin(selected_drivers)].copy()
                 fig = px.line(chart_data, x='Date', y='Elo', color='Driver', 
                               color_discrete_sequence=px.colors.qualitative.Bold)
@@ -275,8 +284,6 @@ if df_raw is not None:
             
             df_goat = pd.DataFrame(goat_records)
             
-            import plotly.express as px # Lazy Import
-            
             fig_goat = px.scatter(
                 df_goat, x='Date', y='Elo', color='Driver',
                 category_orders={"Driver": df_goat['Driver'].unique().tolist()} # Order of appearance
@@ -304,12 +311,13 @@ if df_raw is not None:
                 height=400
             )
 
-    # --- TAB 2 : BY SEASON ---
-    with tab_season:
+    # --- VIEW 2 : BY SEASON ---
+    elif nav_selection == "By Season":
         years_list = sorted(df_elo['Year'].unique(), reverse=True)
         col_sel, col_kpi = st.columns([1, 3])
         
         with col_sel:
+            # L'interaction ici rechargera le script, mais nav_selection restera sur "By Season"
             selected_year = st.selectbox("Season", years_list)
         
         # Filter Data
@@ -339,8 +347,6 @@ if df_raw is not None:
         
         top_10_drivers = final_rankings.head(10)['Driver'].tolist()
         chart_data_season = data_year[data_year['Driver'].isin(top_10_drivers)].copy()
-        
-        import plotly.express as px # Lazy Import
         
         fig_season = px.line(
             chart_data_season, x='Date', y='Elo', color='Driver',
