@@ -5,21 +5,22 @@ import streamlit as st
 # --- CSS: TYPOGRAPHY, BADGES & LAYOUT ---
 st.markdown("""
 <style>
-    /* 1. Title Adjustment */
+    /* 1. Global Spacing */
     .block-container {
         padding-top: 2rem;
-        padding-bottom: 2rem;
+        padding-bottom: 3rem;
     }
     
     /* 2. Custom Badge Style for Domains */
     .badge {
         display: inline-block;
-        padding: 4px 12px;
-        border-radius: 12px;
-        font-size: 14px;
+        padding: 5px 14px;      /* A little more breathing room inside the badge */
+        border-radius: 15px;
+        font-size: 13px;
         font-weight: 600;
-        margin-bottom: 5px;
+        /* margin-bottom removed, handled by flex gap now */
         color: #333;
+        border: 1px solid rgba(0,0,0,0.05); /* Subtle border for definition */
     }
     .finance { background-color: #E3F2FD; color: #1565C0; } 
     .cinema  { background-color: #F3E5F5; color: #7B1FA2; } 
@@ -30,24 +31,26 @@ st.markdown("""
     .desc-text {
         font-size: 15px;
         color: #444;
-        line-height: 1.5;
+        line-height: 1.6;       /* Improved line height for readability */
+        margin-top: 5px;        /* Slight push from the badge */
     }
 
-    /* 4. EQUAL HEIGHT CARDS HACK (CORRECTED) */
+    /* 4. EQUAL HEIGHT CARDS HACK & SPACING */
     /* Target the container with border */
     [data-testid="stVerticalBlockBorderWrapper"] > div {
-        min-height: 280px;      /* Force rigid height */
+        min-height: 300px;      /* Adjusted height */
         height: 100%;
         
         /* Flex Layout Controls */
         display: flex;
         flex-direction: column;
         
-        /* ALIGNMENT FIX: Force content to top, not spread out */
+        /* ALIGNMENT: Content at top */
         justify-content: flex-start !important; 
         
-        /* Spacing between elements (Title, Badge, Text) */
-        gap: 15px; 
+        /* INTERNAL SPACING: Key change here */
+        gap: 22px;              /* Larger gap between Title, Badge, and Text */
+        padding-bottom: 15px;   /* Space at the bottom of the card */
     }
 </style>
 """, unsafe_allow_html=True)
@@ -62,17 +65,17 @@ This portfolio gathers Python projects applied to market finance and other areas
 st.divider()
 
 # --- PROJECT GRID (2x2 Layout) ---
-
+# Added gap="large" for better horizontal separation
 # ROW 1
-col1, col2 = st.columns(2, gap="medium")
+col1, col2 = st.columns(2, gap="large")
 
 # 1. FINANCE PROJECT
 with col1:
     with st.container(border=True):
-        # Title (Clickable)
+        # Title
         st.page_link("01_Portfolio_Optimizer.py", label="**Portfolio Optimizer**", use_container_width=True)
         
-        # Domain Badge
+        # Badge
         st.markdown('<span class="badge finance">Market Finance</span>', unsafe_allow_html=True)
         
         # Description
@@ -87,7 +90,7 @@ with col2:
     with st.container(border=True):
         st.page_link("pages/03_Movie_Recommendation_System.py", label="**Movie Recommendation System**", use_container_width=True)
         
-        # Domain Badge
+        # Badge
         st.markdown('<span class="badge cinema">Cinema & NLP</span>', unsafe_allow_html=True)
         
         # Description
@@ -97,19 +100,18 @@ with col2:
         </div>
         """, unsafe_allow_html=True)
 
-# Spacer between rows
-st.write("") 
-st.write("")
+# Spacer between rows (Increased for better vertical separation)
+st.markdown("<br>", unsafe_allow_html=True)
 
 # ROW 2
-col3, col4 = st.columns(2, gap="medium")
+col3, col4 = st.columns(2, gap="large")
 
 # 3. F1 PROJECT
 with col3:
     with st.container(border=True):
         st.page_link("pages/04_F1_Elo_System.py", label="**F1 Elo Rating System**", use_container_width=True)
         
-        # Domain Badge
+        # Badge
         st.markdown('<span class="badge f1">Formula 1 Sports Analysis</span>', unsafe_allow_html=True)
         
         # Description
@@ -125,7 +127,7 @@ with col4:
         # Button
         st.button("**Upcoming Project**", disabled=True, use_container_width=True)
         
-        # Domain Badge
+        # Badge
         st.markdown('<span class="badge data">Data Engineering</span>', unsafe_allow_html=True)
         
         # Description
