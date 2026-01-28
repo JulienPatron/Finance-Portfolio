@@ -97,6 +97,7 @@ with col3:
         st.markdown("""
         <div class="desc-text">
         Interactive dashboard applying the Chess Elo rating system to Formula 1 for historical performance analysis.
+                    
         </div>
         """, unsafe_allow_html=True)
 
