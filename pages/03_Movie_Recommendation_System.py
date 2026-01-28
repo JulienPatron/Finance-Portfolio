@@ -144,7 +144,7 @@ def update_selection(title):
     st.session_state['movie'] = title
 
 st.title("Movie Recommendation System")
-st.markdown("Item-based filtering (KNN) on MovieLens 32M | Real-time data via TMDB API")
+st.markdown(" Movie recommendation engine leveraging millions of user ratings to identify fan favorites similar to a selected title.")
 
 # Selector
 idx = int(df[df['title'] == st.session_state['movie']].index[0]) if st.session_state['movie'] in df['title'].values else None
@@ -188,7 +188,7 @@ if selected and (go_btn or st.session_state['movie']):
             st.markdown(logos_html, unsafe_allow_html=True)
 
     # 3. Calculate Neighbors (KNN)
-    st.subheader("You might also like:")
+    st.subheader("Fans also liked:")
     
     # ML Core: Scikit-learn call
     distances, indices = model.kneighbors(matrix[row['matrice_id']], n_neighbors=6)
