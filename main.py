@@ -41,8 +41,9 @@ finance_page_1 = st.Page(
     title="Portfolio Optimizer"
 )
 
+# Dans main.py, modifie cette partie :
 finance_page_2 = st.Page(
-    "pages/05_Black_Scholes_Option_Pricer.py", 
+    "pages/05_Black_Scholes_Option_Pricer.py",  # Ajout de "pages/" devant
     title="Black-Scholes Pricer"
 )
 
