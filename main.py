@@ -8,7 +8,6 @@ st.set_page_config(
 )
 
 # --- 2. PAGE DEFINITIONS ---
-# Icons have been removed as requested.
 
 # Landing Page
 home_page = st.Page(
@@ -36,12 +35,13 @@ f1_page = st.Page(
 )
 
 # --- 3. NAVIGATION SETUP ---
-# Grouped into: Home, Finance, and Other
+# TRICK: We use " " (a space) for the Home section key.
+# This hides the section label, making "Home" look like a standalone clickable title.
 pg = st.navigation(
     {
-        "Home": [home_page],
-        "Finance": [finance_page],
-        "Other": [movie_page, f1_page],
+        " ": [home_page],              # The space hides the header, leaving only the clickable button
+        "Finance": [finance_page],     # This creates the "Finance" header
+        "Other": [movie_page, f1_page] # This creates the "Other" header
     }
 )
 
