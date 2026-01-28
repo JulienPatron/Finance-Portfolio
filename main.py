@@ -7,35 +7,41 @@ st.set_page_config(
     initial_sidebar_state="expanded" 
 )
 
-# --- CSS: SIDEBAR STYLING ---
+# --- CSS FOR SIDEBAR STYLING ---
 st.markdown("""
 <style>
-    /* 1. SIDEBAR BACKGROUND COLOR */
+    /* 1. Sidebar Background Color */
     [data-testid="stSidebar"] {
-        background-color: #F8F9FC; /* Very pale blue-grey */
-        border-right: 1px solid #E0E0E0; /* Subtle border on the right */
+        background-color: #F8F9FB; /* Very light grey-blue */
+        border-right: 1px solid #E6E9EF;
     }
 
-    /* 2. NAME STYLING (Gradient Color) */
-    /* Insert text above the navigation container */
+    /* 2. "Julien Patron" Name Styling */
     [data-testid="stSidebarNav"]::before {
         content: "Julien Patron";
         display: block;
-        font-size: 26px;  
-        font-weight: 800; /* Extra Bold */
-        margin-bottom: 25px; 
-        margin-left: 10px;
+        font-size: 26px;
+        font-weight: 800; /* Extra bold */
+        color: #1E3A8A;   /* Royal Blue (Professional) */
+        margin-bottom: 25px;
+        margin-left: 20px;
         margin-top: 10px;
-        
-        /* Gradient Text Effect (Blue to Purple) */
-        background: linear-gradient(45deg, #1565C0, #7B1FA2);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
+    }
+
+    /* 3. Navigation Section Headers (Finance, Other) */
+    div[data-testid="stSidebarNav"] h4 {
+        color: #64748B; /* Slate grey for section titles */
+        font-size: 14px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        padding-left: 10px;
     }
     
-    /* 3. Adjust Navigation Padding */
-    div[data-testid="stSidebarNav"] {
-        padding-top: 0.5rem; 
+    /* Optional: Style the active link to pop a bit more */
+    .st-emotion-cache-16txtl3 {
+        color: #1E3A8A !important;
+        font-weight: 600;
     }
 </style>
 """, unsafe_allow_html=True)
