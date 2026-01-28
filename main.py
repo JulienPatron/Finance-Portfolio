@@ -7,83 +7,63 @@ st.set_page_config(
     initial_sidebar_state="expanded" 
 )
 
-# --- CSS: SIDEBAR STYLING (CORRECTED) ---
+# --- CSS FOR SIDEBAR NAME & STYLING ---
+# This inserts "Julien Patron" above the navigation menu
 st.markdown("""
 <style>
-    /* 1. "Julien Patron" Name (Top Left) */
+    /* Insert text above the navigation container */
     [data-testid="stSidebarNav"]::before {
         content: "Julien Patron";
         display: block;
-        font-size: 28px;
+        font-size: 28px;  /* Text size */
         font-weight: bold;
-        margin-bottom: 20px;
-        margin-left: 20px;
+        margin-bottom: 20px; /* Space between name and Home button */
+        margin-left: 20px;   /* Alignment */
         color: var(--text-color);
     }
     
-    /* 2. Adjust Spacing */
+    /* Optional: Fine-tune the top padding if needed */
     div[data-testid="stSidebarNav"] {
         padding-top: 1rem; 
     }
-
-    /* 3. Color Coding for Section Headers (ROBUST METHOD) */
-    
-    /* Logic: In st.navigation, headers are usually rendered as 'span' elements.
-       1st span = " " (Home, hidden)
-       2nd span = "Finance"
-       3rd span = "Other"
-    */
-
-    /* Target the 2nd Header (Finance) -> BLUE */
-    div[data-testid="stSidebarNav"] > div > span:nth-of-type(2) {
-        color: #1565C0 !important;
-        font-weight: 800;
-        font-size: 14px;
-    }
-
-    /* Target the 3rd Header (Other) -> PURPLE */
-    div[data-testid="stSidebarNav"] > div > span:nth-of-type(3) {
-        color: #7B1FA2 !important;
-        font-weight: 800;
-        font-size: 14px;
-    }
-    
-    /* Fallback: In case structure is slightly different (nested divs) */
-    div[data-testid="stSidebarNav"] > ul:nth-of-type(2) span { color: #1565C0 !important; }
-    div[data-testid="stSidebarNav"] > ul:nth-of-type(3) span { color: #7B1FA2 !important; }
-
 </style>
 """, unsafe_allow_html=True)
 
 # --- 2. PAGE DEFINITIONS ---
 
+# Landing Page
+# MODIFICATION: I removed 'icon="🏠"' here to remove the emoji from the tab and menu
 home_page = st.Page(
     "00_Home.py", 
     title="Home", 
     default=True
 )
 
+# Project 1: Finance
 finance_page = st.Page(
     "01_Portfolio_Optimizer.py", 
     title="Portfolio Optimizer"
 )
 
+# Project 2: Cinema
 movie_page = st.Page(
     "pages/03_Movie_Recommendation_System.py", 
     title="Movie Recommender"
 )
 
+# Project 3: F1
 f1_page = st.Page(
     "pages/04_F1_Elo_System.py", 
     title="F1 Elo System"
 )
 
 # --- 3. NAVIGATION SETUP ---
+# TRICK: using " " for Home hides the section title
 pg = st.navigation(
     {
-        " ": [home_page],              # Header invisible (1st position)
-        "Finance": [finance_page],     # Header will be BLUE (2nd position)
-        "Other": [movie_page, f1_page] # Header will be PURPLE (3rd position)
+        " ": [home_page],
+        "Finance": [finance_page],
+        "Other": [movie_page, f1_page] 
     }
 )
 
