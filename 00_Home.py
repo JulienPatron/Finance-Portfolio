@@ -36,7 +36,7 @@ st.markdown("""
     /* 4. EQUAL HEIGHT CARDS HACK (CORRECTED) */
     /* Target the container with border */
     [data-testid="stVerticalBlockBorderWrapper"] > div {
-        min-height: 1000px;      /* Force rigid height */
+        min-height: 280px;      /* Force rigid height */
         height: 100%;
         
         /* Flex Layout Controls */
@@ -47,7 +47,7 @@ st.markdown("""
         justify-content: flex-start !important; 
         
         /* Spacing between elements (Title, Badge, Text) */
-        gap: 30px; 
+        gap: 15px; 
     }
 </style>
 """, unsafe_allow_html=True)
