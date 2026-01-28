@@ -2,7 +2,7 @@ import streamlit as st
 
 # Note: No set_page_config here, it is handled by main.py
 
-# --- CSS: TYPOGRAPHY & BADGES ---
+# --- CSS: TYPOGRAPHY, BADGES & LAYOUT ---
 st.markdown("""
 <style>
     /* 1. Title Adjustment */
@@ -11,7 +11,7 @@ st.markdown("""
         padding-bottom: 2rem;
     }
     
-    /* 2. Custom Badge Style for Domains (Pale Colors) */
+    /* 2. Custom Badge Style for Domains */
     .badge {
         display: inline-block;
         padding: 4px 12px;
@@ -21,16 +21,26 @@ st.markdown("""
         margin-bottom: 10px;
         color: #333;
     }
-    .finance { background-color: #E3F2FD; color: #1565C0; } /* Pale Blue */
-    .cinema  { background-color: #F3E5F5; color: #7B1FA2; } /* Pale Purple */
-    .f1      { background-color: #FFEBEE; color: #C62828; } /* Pale Red */
-    .data    { background-color: #E8F5E9; color: #2E7D32; } /* Pale Green */
+    .finance { background-color: #E3F2FD; color: #1565C0; } 
+    .cinema  { background-color: #F3E5F5; color: #7B1FA2; } 
+    .f1      { background-color: #FFEBEE; color: #C62828; } 
+    .data    { background-color: #E8F5E9; color: #2E7D32; } 
 
     /* 3. Description Text Styling */
     .desc-text {
         font-size: 15px;
         color: #444;
         line-height: 1.6;
+    }
+
+    /* 4. EQUAL HEIGHT CARDS HACK */
+    /* Target the container with border */
+    [data-testid="stVerticalBlockBorderWrapper"] > div {
+        min-height: 280px; /* Force all cards to be at least this tall */
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -55,10 +65,10 @@ with col1:
         # Title (Clickable)
         st.page_link("01_Portfolio_Optimizer.py", label="**Portfolio Optimizer**", use_container_width=True)
         
-        # Domain Badge (Pale Blue)
+        # Domain Badge
         st.markdown('<span class="badge finance">Market Finance</span>', unsafe_allow_html=True)
         
-        # Expanded Description
+        # Description
         st.markdown("""
         <div class="desc-text">
         Investment tool based on Modern Portfolio Theory. It visualizes the Efficient Frontier to identify the optimal asset allocation for a specific return target.
@@ -70,9 +80,10 @@ with col2:
     with st.container(border=True):
         st.page_link("pages/03_Movie_Recommendation_System.py", label="**Movie Recommendation System**", use_container_width=True)
         
-        # Domain Badge (Pale Purple)
+        # Domain Badge
         st.markdown('<span class="badge cinema">Cinema & NLP</span>', unsafe_allow_html=True)
         
+        # Description
         st.markdown("""
         <div class="desc-text">
         Movie recommendation engine leveraging millions of user ratings to identify fan favorites similar to a selected title.
@@ -91,25 +102,26 @@ with col3:
     with st.container(border=True):
         st.page_link("pages/04_F1_Elo_System.py", label="**F1 Elo Rating System**", use_container_width=True)
         
-        # Domain Badge (Pale Red)
+        # Domain Badge
         st.markdown('<span class="badge f1">Formula 1 Sports Analysis</span>', unsafe_allow_html=True)
         
+        # Description
         st.markdown("""
         <div class="desc-text">
         Interactive dashboard applying the Chess Elo rating system to Formula 1 for historical performance analysis.
-                    
         </div>
         """, unsafe_allow_html=True)
 
 # 4. FUTURE PROJECT
 with col4:
     with st.container(border=True):
-        # Button is disabled but styled similarly
+        # Button
         st.button("**Upcoming Project**", disabled=True, use_container_width=True)
         
-        # Domain Badge (Pale Green)
+        # Domain Badge
         st.markdown('<span class="badge data">Data Engineering</span>', unsafe_allow_html=True)
         
+        # Description
         st.markdown("""
         <div class="desc-text">
         A new infrastructure project is currently under active development. 
