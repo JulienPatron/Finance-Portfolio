@@ -7,10 +7,10 @@ st.set_page_config(
     initial_sidebar_state="expanded" 
 )
 
-# --- CSS: SIDEBAR STYLING ---
+# --- CSS: SIDEBAR STYLING (CORRECTED) ---
 st.markdown("""
 <style>
-    /* 1. "Julien Patron" Name (Top Left) - Keep Dark/Neutral */
+    /* 1. "Julien Patron" Name (Top Left) */
     [data-testid="stSidebarNav"]::before {
         content: "Julien Patron";
         display: block;
@@ -18,7 +18,7 @@ st.markdown("""
         font-weight: bold;
         margin-bottom: 20px;
         margin-left: 20px;
-        color: var(--text-color); /* Neutral Dark */
+        color: var(--text-color);
     }
     
     /* 2. Adjust Spacing */
@@ -26,30 +26,31 @@ st.markdown("""
         padding-top: 1rem; 
     }
 
-    /* 3. Color Coding for Section Headers */
+    /* 3. Color Coding for Section Headers (ROBUST METHOD) */
     
-    /* Target the Section Headers within the navigation */
-    /* Note: Streamlit renders section headers as span elements inside a specific div structure. 
-       We target them by order (nth-of-type) to apply specific colors. */
+    /* Logic: In st.navigation, headers are usually rendered as 'span' elements.
+       1st span = " " (Home, hidden)
+       2nd span = "Finance"
+       3rd span = "Other"
+    */
 
-    /* "Finance" Header (2nd Section, assuming " " is 1st) -> BLUE */
-    div[data-testid="stSidebarNav"] > ul:nth-of-type(2) span {
-        color: #1565C0 !important; /* Matches Home Finance Badge */
+    /* Target the 2nd Header (Finance) -> BLUE */
+    div[data-testid="stSidebarNav"] > div > span:nth-of-type(2) {
+        color: #1565C0 !important;
         font-weight: 800;
         font-size: 14px;
     }
 
-    /* "Other" Header (3rd Section) -> PURPLE */
-    div[data-testid="stSidebarNav"] > ul:nth-of-type(3) span {
-        color: #7B1FA2 !important; /* Matches Home Cinema Badge */
+    /* Target the 3rd Header (Other) -> PURPLE */
+    div[data-testid="stSidebarNav"] > div > span:nth-of-type(3) {
+        color: #7B1FA2 !important;
         font-weight: 800;
         font-size: 14px;
     }
     
-    /* Optional: Style the active page background to be subtle gray */
-    .st-emotion-cache-16txtl3 {
-        background-color: #f0f2f6;
-    }
+    /* Fallback: In case structure is slightly different (nested divs) */
+    div[data-testid="stSidebarNav"] > ul:nth-of-type(2) span { color: #1565C0 !important; }
+    div[data-testid="stSidebarNav"] > ul:nth-of-type(3) span { color: #7B1FA2 !important; }
 
 </style>
 """, unsafe_allow_html=True)
@@ -80,9 +81,9 @@ f1_page = st.Page(
 # --- 3. NAVIGATION SETUP ---
 pg = st.navigation(
     {
-        " ": [home_page],              # Header invisible
-        "Finance": [finance_page],     # Header will be BLUE
-        "Other": [movie_page, f1_page] # Header will be PURPLE
+        " ": [home_page],              # Header invisible (1st position)
+        "Finance": [finance_page],     # Header will be BLUE (2nd position)
+        "Other": [movie_page, f1_page] # Header will be PURPLE (3rd position)
     }
 )
 
