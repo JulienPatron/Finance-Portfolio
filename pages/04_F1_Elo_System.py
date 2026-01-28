@@ -231,7 +231,7 @@ if df_raw is not None:
         
         with col_select:
             all_drivers = sorted(df_elo['Driver'].unique())
-            default_selection = ["Michael Schumacher", "Lewis Hamilton", "Max Verstappen", "Ayrton Senna", "Alain Prost"]
+            default_selection = ["Michael Schumacher", "Lewis Hamilton", "Max Verstappen", "Ayrton Senna"]
             valid_defaults = [d for d in default_selection if d in all_drivers]
             
             selected_drivers = st.multiselect("Select Drivers", all_drivers, default=valid_defaults)

@@ -8,21 +8,19 @@ st.set_page_config(
 )
 
 # --- CSS FOR SIDEBAR NAME & STYLING ---
-# This inserts "Julien Patron" above the navigation menu
 st.markdown("""
 <style>
     /* Insert text above the navigation container */
     [data-testid="stSidebarNav"]::before {
         content: "Julien Patron";
         display: block;
-        font-size: 28px;  /* Text size */
+        font-size: 28px;
         font-weight: bold;
-        margin-bottom: 20px; /* Space between name and Home button */
-        margin-left: 20px;   /* Alignment */
+        margin-bottom: 20px;
+        margin-left: 20px;
         color: var(--text-color);
     }
     
-    /* Optional: Fine-tune the top padding if needed */
     div[data-testid="stSidebarNav"] {
         padding-top: 1rem; 
     }
@@ -31,38 +29,39 @@ st.markdown("""
 
 # --- 2. PAGE DEFINITIONS ---
 
-# Landing Page
-# MODIFICATION: I removed 'icon="🏠"' here to remove the emoji from the tab and menu
 home_page = st.Page(
     "00_Home.py", 
     title="Home", 
     default=True
 )
 
-# Project 1: Finance
-finance_page = st.Page(
+# Finance Projects
+finance_page_1 = st.Page(
     "01_Portfolio_Optimizer.py", 
     title="Portfolio Optimizer"
 )
 
-# Project 2: Cinema
-movie_page = st.Page(
-    "pages/03_Movie_Recommendation_System.py", 
-    title="Movie Movie Recommendation System"
+finance_page_2 = st.Page(
+    "05_Black_Scholes_Option_Pricer.py", 
+    title="Black-Scholes Pricer"
 )
 
-# Project 3: F1
+# Other Projects
+movie_page = st.Page(
+    "pages/03_Movie_Recommendation_System.py", 
+    title="Movie Recommender"
+)
+
 f1_page = st.Page(
     "pages/04_F1_Elo_System.py", 
-    title="F1 Elo Rating System"
+    title="F1 Elo System"
 )
 
 # --- 3. NAVIGATION SETUP ---
-# TRICK: using " " for Home hides the section title
 pg = st.navigation(
     {
         " ": [home_page],
-        "Finance": [finance_page],
+        "Finance": [finance_page_1, finance_page_2], # Ajout ici
         "Other": [movie_page, f1_page] 
     }
 )
