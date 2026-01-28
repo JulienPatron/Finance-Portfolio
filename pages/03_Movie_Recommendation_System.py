@@ -179,7 +179,7 @@ if selected and (go_btn or st.session_state['movie']):
     with c2:
         st.subheader(selected)
         st.caption(f"Year: {info['year']} | Runtime: {info['runtime']} | Genres: {info['genres']}")
-        st.markdown(f"**TMDB Rating:** ⭐ {info['rating']}/10")
+        st.markdown(f"**TMDB Rating:** {info['rating']}/10")
         st.write(f"_{info['overview']}_")
         
         if info['streaming']:
@@ -222,7 +222,7 @@ if selected and (go_btn or st.session_state['movie']):
             st.progress(match_score, text=f"Match: {match_score}%")
             
             # Rating (Fixing the HTML bug here)
-            st.markdown(f'<div class="movie-meta">⭐ {n_info["rating"]}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="movie-meta">{n_info["rating"]}</div>', unsafe_allow_html=True)
 
             # Streaming Logos
             if n_info['streaming']:

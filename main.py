@@ -1,53 +1,49 @@
 import streamlit as st
 
-# --- 1. CONFIGURATION GLOBALE (Doit être la toute première commande) ---
+# --- 1. GLOBAL CONFIGURATION (Must be the very first command) ---
 st.set_page_config(
     page_title="Julien Patron - Portfolio",
     layout="wide",
     initial_sidebar_state="expanded" 
 )
 
-# --- 2. DÉFINITION DES PAGES ---
-# On définit les fichiers cibles. 
-# Note : title="" définit ce qui apparait dans le menu de navigation.
+# --- 2. PAGE DEFINITIONS ---
+# Icons have been removed as requested.
 
-# Page d'accueil (Load instantané)
+# Landing Page
 home_page = st.Page(
     "00_Home.py", 
-    title="Accueil", 
-    icon="🏠", 
+    title="Home", 
     default=True
 )
 
-# Projet 1 : Finance
+# Project 1: Finance
 finance_page = st.Page(
     "01_Portfolio_Optimizer.py", 
-    title="Portfolio Optimizer", 
-    icon="📈"
+    title="Portfolio Optimizer"
 )
 
-# Projet 2 : Cinéma
+# Project 2: Cinema
 movie_page = st.Page(
     "pages/03_Movie_Recommendation_System.py", 
-    title="Movie Recommender", 
-    icon="🎬"
+    title="Movie Recommender"
 )
 
-# Projet 3 : F1
+# Project 3: F1
 f1_page = st.Page(
     "pages/04_F1_Elo_System.py", 
-    title="F1 Elo System", 
-    icon="🏎️"
+    title="F1 Elo System"
 )
 
-# --- 3. NAVIGATION ---
-# Regroupement logique dans la sidebar
+# --- 3. NAVIGATION SETUP ---
+# Grouped into: Home, Finance, and Other
 pg = st.navigation(
     {
-        "Général": [home_page],
-        "Projets Data": [finance_page, movie_page, f1_page],
+        "Home": [home_page],
+        "Finance": [finance_page],
+        "Other": [movie_page, f1_page],
     }
 )
 
-# --- 4. EXÉCUTION ---
+# --- 4. EXECUTION ---
 pg.run()
