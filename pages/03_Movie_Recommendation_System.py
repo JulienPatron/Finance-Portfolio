@@ -6,9 +6,9 @@ import os
 import gzip
 import gc
 
-# Note : Pas de set_page_config, géré par main.py
+# Note: No set_page_config, handled by main.py
 
-# --- CSS PERSONNALISÉ ---
+# --- CUSTOM CSS ---
 st.markdown("""
 <style>
     .block-container {padding-top: 1rem;}
@@ -48,58 +48,57 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==============================================================================
-# 1. CHARGEMENT DES DONNÉES (BACKEND)
+# 1. DATA LOADING (BACKEND)
 # ==============================================================================
 
 @st.cache_resource(show_spinner=False)
 def load_recommendation_engine():
     """
-    Charge le modèle KNN et la matrice sparse.
-    Utilise cache_resource car ce sont des objets lourds non-sérialisables simplement.
+    Loads the KNN model and the sparse matrix.
+    Uses cache_resource as these are heavy, non-serializable objects.
     """
     try:
-        # Gestion des chemins (Local vs Cloud vs Pages Dir)
-        # On cherche d'abord à la racine relative, sinon dossier parent
+        # Path management (Local vs Cloud vs Pages Dir)
         file_paths = {
             "model": "modele_knn.pkl.gz",
             "matrix": "matrice_sparse.pkl.gz",
             "db": "liste_films_final.csv"
         }
         
-        # Si on est dans le dossier 'pages', les fichiers sont au niveau parent
+        # If running from 'pages' directory, files are in the parent dir
         if not os.path.exists(file_paths["db"]):
              file_paths = {k: f"../{v}" for k, v in file_paths.items()}
 
-        # Chargement Modèle
+        # Load Model
         with gzip.open(file_paths["model"], 'rb') as f:
             model = pickle.load(f)
-        gc.collect() # Force le nettoyage RAM
+        gc.collect() # Force RAM cleanup
 
-        # Chargement Matrice
+        # Load Matrix
         with gzip.open(file_paths["matrix"], 'rb') as f:
             matrix = pickle.load(f)
         gc.collect()
 
-        # Chargement DB
+        # Load DB
         df = pd.read_csv(file_paths["db"])
         
         return model, matrix, df
     except Exception as e:
-        st.error(f"Erreur de chargement des fichiers : {e}")
+        st.error(f"Error loading files: {e}")
         return None, None, None
 
-# Chargement initial
+# Initial Load
 model, matrix, df = load_recommendation_engine()
 
 if model is None:
-    st.warning("Les fichiers du modèle (pkl.gz) sont introuvables.")
+    st.warning("Model files (pkl.gz) not found.")
     st.stop()
 
 # ==============================================================================
-# 2. API TMDB (AVEC CACHE)
+# 2. TMDB API (WITH CACHE)
 # ==============================================================================
 
-@st.cache_data(ttl=86400, show_spinner=False) # Cache de 24h pour limiter les appels API
+@st.cache_data(ttl=86400, show_spinner=False) # 24h Cache to limit API calls
 def get_tmdb_details(tmdb_id):
     if pd.isna(tmdb_id): 
         return None
@@ -108,13 +107,13 @@ def get_tmdb_details(tmdb_id):
         api_key = st.secrets["TMDB_API_KEY"]
         url = f"https://api.themoviedb.org/3/movie/{int(tmdb_id)}?api_key={api_key}&language=en-US&append_to_response=watch/providers"
         
-        response = requests.get(url, timeout=1.5) # Timeout court pour éviter de bloquer l'app
+        response = requests.get(url, timeout=1.5) # Short timeout to prevent blocking
         if response.status_code != 200:
             return None
             
         data = response.json()
         
-        # Extraction providers FR
+        # Extract Providers (FR region - change to 'US' if needed)
         providers = data.get('watch/providers', {}).get('results', {}).get('FR', {}).get('flatrate', [])[:3]
         logos = [{
             "logo": f"https://image.tmdb.org/t/p/original{p['logo_path']}",
@@ -124,7 +123,7 @@ def get_tmdb_details(tmdb_id):
         return {
             "poster": f"https://image.tmdb.org/t/p/w500{data.get('poster_path')}" if data.get('poster_path') else "https://via.placeholder.com/300x450?text=No+Image",
             "title": data.get('title'),
-            "overview": data.get('overview', 'Synopsis indisponible.'),
+            "overview": data.get('overview', 'Synopsis unavailable.'),
             "year": data.get('release_date', '????')[:4],
             "rating": round(data.get('vote_average', 0), 1),
             "genres": ", ".join([g['name'] for g in data.get('genres', [])][:3]),
@@ -135,7 +134,7 @@ def get_tmdb_details(tmdb_id):
         return None
 
 # ==============================================================================
-# 3. INTERFACE & LOGIQUE
+# 3. INTERFACE & LOGIC
 # ==============================================================================
 
 if 'movie' not in st.session_state:
@@ -145,58 +144,58 @@ def update_selection(title):
     st.session_state['movie'] = title
 
 st.title("Movie Recommendation System")
-st.markdown("Item-based filtering (KNN) sur MovieLens 32M | Données temps réel via TMDB API")
+st.markdown("Item-based filtering (KNN) on MovieLens 32M | Real-time data via TMDB API")
 
-# Sélecteur
+# Selector
 idx = int(df[df['title'] == st.session_state['movie']].index[0]) if st.session_state['movie'] in df['title'].values else None
 selected = st.selectbox(
-    "Rechercher un film de référence :", 
+    "Search for a reference movie:", 
     df['title'].values, 
     index=idx, 
-    placeholder="Tapez un titre (ex: Inception)..."
+    placeholder="Type a title (e.g. Inception)..."
 )
 
-go_btn = st.button("Lancer la recommandation", type="primary", use_container_width=True)
+go_btn = st.button("Get Recommendations", type="primary", use_container_width=True)
 
-# MOTEUR DE RECOMMANDATION
+# RECOMMENDATION ENGINE
 if selected and (go_btn or st.session_state['movie']):
     
-    # 1. Récupération du film source
+    # 1. Fetch Source Movie
     row = df[df['title'] == selected].iloc[0]
     info = get_tmdb_details(row['tmdbId'])
     
-    # Fallback si API échoue
+    # Fallback if API fails
     if info is None:
         info = {"poster": "https://via.placeholder.com/300x450?text=Error", "year": "????", 
                 "runtime": "N/A", "genres": "N/A", "rating": "N/A", 
-                "overview": "Information indisponible (Erreur API).", "streaming": []}
+                "overview": "Information unavailable (API Error).", "streaming": []}
 
     st.divider()
     
-    # 2. Affichage Hero (Film sélectionné)
+    # 2. Hero Section
     c1, c2 = st.columns([1, 3])
     with c1:
         st.image(info['poster'], use_container_width=True)
     with c2:
         st.subheader(selected)
-        st.caption(f"Année: {info['year']} | Durée: {info['runtime']} | Genres: {info['genres']}")
-        st.markdown(f"**Note TMDB:** ⭐ {info['rating']}/10")
+        st.caption(f"Year: {info['year']} | Runtime: {info['runtime']} | Genres: {info['genres']}")
+        st.markdown(f"**TMDB Rating:** ⭐ {info['rating']}/10")
         st.write(f"_{info['overview']}_")
         
         if info['streaming']:
-            st.markdown("**Disponible sur (FR):**")
+            st.markdown("**Available on (FR):**")
             logos_html = "".join([f'<img src="{p["logo"]}" class="provider-logo" title="{p["name"]}">' for p in info['streaming']])
             st.markdown(logos_html, unsafe_allow_html=True)
 
-    # 3. Calcul des voisins (KNN)
-    st.subheader("Vous aimerez aussi :")
+    # 3. Calculate Neighbors (KNN)
+    st.subheader("You might also like:")
     
-    # Le coeur du ML : Appel à Scikit-learn
+    # ML Core: Scikit-learn call
     distances, indices = model.kneighbors(matrix[row['matrice_id']], n_neighbors=6)
     
     cols = st.columns(5)
     
-    # Boucle sur les 5 voisins (on saute le 0 qui est le film lui-même)
+    # Loop over neighbors (skipping the 0th which is the movie itself)
     for i, col in enumerate(cols):
         neighbor_idx = i + 1
         neighbor_db_id = indices.flatten()[neighbor_idx]
@@ -205,7 +204,7 @@ if selected and (go_btn or st.session_state['movie']):
         neighbor_row = df[df['matrice_id'] == neighbor_db_id].iloc[0]
         neighbor_title = neighbor_row['title']
         
-        # Appel API (Cached)
+        # API Call (Cached)
         n_info = get_tmdb_details(neighbor_row['tmdbId'])
         
         if n_info is None:
@@ -216,25 +215,25 @@ if selected and (go_btn or st.session_state['movie']):
         with col:
             st.image(n_info['poster'], use_container_width=True)
             
-            # Titre
+            # Title
             st.markdown(f'<div class="movie-title">{neighbor_title}</div>', unsafe_allow_html=True)
             
             # Match Bar
             st.progress(match_score, text=f"Match: {match_score}%")
             
-            # Rating
+            # Rating (Fixing the HTML bug here)
             st.markdown(f'<div class="movie-meta">⭐ {n_info["rating"]}</div>', unsafe_allow_html=True)
 
-            # Logos Streaming
+            # Streaming Logos
             if n_info['streaming']:
                 logos_html = "".join([f'<img src="{p["logo"]}" class="provider-logo" title="{p["name"]}">' for p in n_info['streaming']])
                 st.markdown(f'<div class="provider-container">{logos_html}</div>', unsafe_allow_html=True)
             else:
-                st.markdown('<div class="provider-container" style="color:#ccc; font-size:12px;">Non disponible</div>', unsafe_allow_html=True)
+                st.markdown('<div class="provider-container" style="color:#ccc; font-size:12px;">Not available</div>', unsafe_allow_html=True)
 
-            # Bouton Récursif
+            # Recursive Button
             st.button(
-                "Voir ce film", 
+                "Select", 
                 key=f"btn_{neighbor_db_id}", 
                 on_click=update_selection, 
                 args=(neighbor_title,), 

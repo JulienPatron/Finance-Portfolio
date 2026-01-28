@@ -2,10 +2,10 @@ import streamlit as st
 import pandas as pd
 import os
 
-# Note : Pas de set_page_config, géré par main.py
+# Note: No set_page_config, handled by main.py
 
 # ==============================================================================
-# 1. MOTEUR MATHÉMATIQUE (ELO)
+# 1. MATHEMATICAL ENGINE (ELO)
 # ==============================================================================
 
 class F1EloRating:
@@ -24,7 +24,7 @@ class F1EloRating:
     def calculate_update(self, driver_rating, driver_pos, teammates_data, field_data):
         total_delta = 0.0
         
-        # 1. Teammate Battle (Poids Fort)
+        # 1. Teammate Battle (High Weight)
         nb_teammates = len(teammates_data)
         if nb_teammates > 0:
             k_team_adjusted = self.k_team_max / nb_teammates
@@ -33,7 +33,7 @@ class F1EloRating:
                 actual = self._get_actual_score(driver_pos, mate['pos'])
                 total_delta += (actual - prob) * k_team_adjusted
 
-        # 2. Field Battle (Poids Faible)
+        # 2. Field Battle (Low Weight)
         expected_score_sum = 0
         actual_score_sum = 0
         valid_opponents = 0
@@ -52,18 +52,18 @@ class F1EloRating:
         return total_delta
 
 # ==============================================================================
-# 2. CHARGEMENT DES DONNÉES (CACHE & OPTIMISÉ)
+# 2. DATA LOADING (CACHED & OPTIMIZED)
 # ==============================================================================
 
 @st.cache_data(show_spinner=False)
 def load_and_clean_data():
     try:
-        # Gestion intelligente du chemin (root vs pages dir)
+        # Smart path handling (root vs pages dir)
         base_dir = "data"
         if not os.path.exists(base_dir):
-            base_dir = "../data" # Fallback si exécuté depuis un sous-dossier
+            base_dir = "../data" # Fallback if executed from subfolder
             
-        # Chargement optimisé avec types spécifiques
+        # Optimized loading with specific types
         races = pd.read_csv(f"{base_dir}/races.csv")
         results = pd.read_csv(f"{base_dir}/results.csv")
         drivers = pd.read_csv(f"{base_dir}/drivers.csv")
@@ -74,24 +74,24 @@ def load_and_clean_data():
         df = pd.merge(df, drivers[['driverId', 'code', 'forename', 'surname']], on='driverId', how='left')
         df = pd.merge(df, constructors[['constructorId', 'name']], on='constructorId', how='left')
         
-        # Renommage et Création colonnes
+        # Rename and Create columns
         df = df.rename(columns={'year': 'Year', 'round': 'Round', 'name_x': 'GP_Name', 'name_y': 'Team', 'positionOrder': 'Position', 'date': 'Date'})
         df['Full_Name'] = df['forename'] + " " + df['surname']
         
-        # Conversion Date (Optimisation temps)
+        # Date Conversion (Time optimization)
         df['Date'] = pd.to_datetime(df['Date'])
         
-        # Nettoyage
+        # Cleaning
         df = df.sort_values(by=['Year', 'Round', 'Position'])
         df = df.drop_duplicates(subset=['Year', 'Round', 'driverId'], keep='first')
         
         return df[['Year', 'Round', 'Date', 'GP_Name', 'driverId', 'Full_Name', 'Team', 'Position']]
     except Exception as e:
-        st.error(f"Erreur de chargement des données CSV : {e}")
+        st.error(f"Error loading CSV data: {e}")
         return None
 
 # ==============================================================================
-# 3. CALCUL DE L'HISTORIQUE ELO (LOURD - CACHÉ)
+# 3. ELO HISTORY CALCULATION (HEAVY - CACHED)
 # ==============================================================================
 
 @st.cache_data(show_spinner=False)
@@ -100,19 +100,19 @@ def compute_elo_history(df):
     current_ratings = {}
     history_records = []
     
-    # GroupBy préserve l'ordre chronologique si le DF est trié
+    # GroupBy preserves chronological order if DF is sorted
     races = df.groupby(['Year', 'Round', 'Date', 'GP_Name'], sort=False)
     
-    # Barre de progression
-    prog_bar = st.sidebar.progress(0, text="Initialisation du moteur Elo...")
+    # Progress Bar
+    prog_bar = st.sidebar.progress(0, text="Initializing Elo Engine...")
     total_races = len(races)
     
     for i, ((year, round_num, date, gp), race_df) in enumerate(races):
-        # Update UI moins fréquent pour gagner en perf
+        # Update UI less frequently to gain performance
         if i % 50 == 0: 
-            prog_bar.progress(i / total_races, text=f"Calcul de la saison {year}...")
+            prog_bar.progress(i / total_races, text=f"Calculating season {year}...")
         
-        # Préparation des structures de données pour la course
+        # Prepare data structures for the race
         race_drivers = []
         for _, row in race_df.iterrows():
             d_id = row['driverId']
@@ -124,21 +124,21 @@ def compute_elo_history(df):
                 'pos': row['Position'], 'rating': current_ratings[d_id]
             })
             
-        # Calcul des deltas
+        # Calculate deltas
         updates = {}
         for driver in race_drivers:
-            # Filtrage des coéquipiers vs reste du plateau
+            # Filter teammates vs rest of the field
             teammates = [d for d in race_drivers if d['team'] == driver['team'] and d['id'] != driver['id']]
             field = [d for d in race_drivers if d['team'] != driver['team']]
             
             updates[driver['id']] = engine.calculate_update(driver['rating'], driver['pos'], teammates, field)
             
-        # Application des mises à jour
+        # Apply updates
         for driver in race_drivers:
             new_rating = driver['rating'] + updates[driver['id']]
             current_ratings[driver['id']] = new_rating
             
-            # On stocke l'historique
+            # Store history
             history_records.append({
                 'Date': date, 'Year': year, 'Driver': driver['name'],
                 'Elo': new_rating, 'Team': driver['team']
@@ -149,21 +149,21 @@ def compute_elo_history(df):
 
 def calculate_teammate_gaps(final_rankings):
     gap_data = []
-    # Optimisation vectorielle difficile ici, on garde la boucle
+    # Vector optimization difficult here, keeping the loop
     for _, row in final_rankings.iterrows():
         driver = row['Driver']
         team = row['Team']
         elo = row['Elo']
         
-        # Trouver le coéquipier
+        # Find teammate
         teammates = final_rankings[(final_rankings['Team'] == team) & (final_rankings['Driver'] != driver)]
         
         gap = 0
         mate_name = "None"
         
         if not teammates.empty:
-            # On prend le coéquipier le plus proche en terme d'Elo (cas où il y a 3 pilotes)
-            # ou simplement l'autre pilote
+            # Take the closest teammate in terms of Elo (case where there are 3 drivers)
+            # or simply the other driver
             teammates = teammates.copy()
             teammates['diff_abs'] = (teammates['Elo'] - elo).abs()
             closest_mate = teammates.sort_values('diff_abs').iloc[0]
@@ -176,10 +176,10 @@ def calculate_teammate_gaps(final_rankings):
     return pd.DataFrame(gap_data).sort_values(by='Gap', ascending=False)
 
 # ==============================================================================
-# 4. INTERFACE UTILISATEUR
+# 4. USER INTERFACE
 # ==============================================================================
 
-# CSS Optimisé
+# Optimized CSS
 st.markdown("""
 <style>
     .block-container { padding-top: 1rem; }
@@ -201,31 +201,31 @@ st.markdown("""
 
 st.title("F1 Elo Rating System")
 
-with st.spinner("Chargement de l'historique F1..."):
+with st.spinner("Loading F1 history..."):
     df_raw = load_and_clean_data()
 
 if df_raw is not None:
-    # Calcul ou récupération du cache Elo
+    # Calculate or retrieve Elo cache
     if 'elo_data' not in st.session_state:
         st.session_state['elo_data'] = compute_elo_history(df_raw)
     df_elo = st.session_state['elo_data']
 
     # --- SIDEBAR ---
     with st.sidebar:
-        st.header("Méthodologie")
+        st.header("Methodology")
         st.info("""
-        **Principe Elo :** Chaque pilote démarre à 1500.
-        **Facteurs Clés :**
-        1. **Duel Coéquipier (High K):** Performance relative à la voiture.
-        2. **Position Piste (Low K):** Performance globale.
+        **Elo Principle:** Every driver starts at 1500.
+        **Key Factors:**
+        1. **Teammate Battle (High K):** Performance relative to the car.
+        2. **Track Position (Low K):** Overall performance against the field.
         """)
 
     # --- TABS ---
-    tab_all_time, tab_season = st.tabs(["📈 Historique Global", "📅 Par Saison"])
+    tab_all_time, tab_season = st.tabs(["All-Time History", "By Season"])
 
     # --- TAB 1 : ALL TIME ---
     with tab_all_time:
-        st.subheader("Comparateur de Pilotes")
+        st.subheader("Driver Comparator")
         
         col_graph, col_select = st.columns([3.5, 1])
         
@@ -234,11 +234,11 @@ if df_raw is not None:
             default_selection = ["Michael Schumacher", "Lewis Hamilton", "Max Verstappen", "Ayrton Senna", "Alain Prost"]
             valid_defaults = [d for d in default_selection if d in all_drivers]
             
-            selected_drivers = st.multiselect("Sélectionner pilotes", all_drivers, default=valid_defaults)
+            selected_drivers = st.multiselect("Select Drivers", all_drivers, default=valid_defaults)
             
         with col_graph:
             if selected_drivers:
-                # Import Lazy de Plotly
+                # Lazy Import of Plotly
                 import plotly.express as px
                 
                 chart_data = df_elo[df_elo['Driver'].isin(selected_drivers)].copy()
@@ -255,15 +255,15 @@ if df_raw is not None:
                 )
                 st.plotly_chart(fig, use_container_width=True)
             else:
-                st.info("Sélectionnez des pilotes pour voir le graphique.")
+                st.info("Select drivers to view the chart.")
 
         st.divider()
         
         col_goat, col_peak = st.columns(2)
 
         with col_goat:
-            st.subheader("Historique du Record Absolu")
-            # Calcul du recordman au fil du temps
+            st.subheader("History of the Record")
+            # Calculate record holder over time
             df_sorted = df_elo.sort_values(by='Date')
             goat_records = []
             current_max = 0
@@ -279,7 +279,7 @@ if df_raw is not None:
             
             fig_goat = px.scatter(
                 df_goat, x='Date', y='Elo', color='Driver',
-                category_orders={"Driver": df_goat['Driver'].unique().tolist()} # Ordre d'apparition
+                category_orders={"Driver": df_goat['Driver'].unique().tolist()} # Order of appearance
             )
             fig_goat.update_traces(marker=dict(size=8, line=dict(width=1, color='DarkSlateGrey')))
             fig_goat.update_layout(
@@ -289,7 +289,7 @@ if df_raw is not None:
             st.plotly_chart(fig_goat, use_container_width=True)
 
         with col_peak:
-            st.subheader("Top Peaks (Elo Max)")
+            st.subheader("Highest Peaks (Max Elo)")
             idx = df_elo.groupby(['Driver'])['Elo'].idxmax()
             best_elo_df = df_elo.loc[idx].sort_values(by='Elo', ascending=False).head(20).reset_index(drop=True)
             best_elo_df.index += 1
@@ -310,12 +310,12 @@ if df_raw is not None:
         col_sel, col_kpi = st.columns([1, 3])
         
         with col_sel:
-            selected_year = st.selectbox("Saison", years_list)
+            selected_year = st.selectbox("Season", years_list)
         
-        # Filtrage données
+        # Filter Data
         data_year = df_elo[df_elo['Year'] == selected_year].copy()
         
-        # Classement Final de la saison
+        # Final Season Ranking
         last_date = data_year['Date'].max()
         final_rankings = data_year[data_year['Date'] == last_date].sort_values(by='Elo', ascending=False)
         champion = final_rankings.iloc[0]
@@ -327,15 +327,15 @@ if df_raw is not None:
         with col_kpi:
             c1, c2, c3, c4 = st.columns(4)
             c1.metric("Champion (Elo)", champion['Driver'])
-            c2.metric("Score Final", f"{int(champion['Elo'])}")
-            c3.metric("Écurie", champion['Team'])
+            c2.metric("Final Score", f"{int(champion['Elo'])}")
+            c3.metric("Team", champion['Team'])
             
             gap_val = champion_stats['Gap']
             sign = "+" if gap_val > 0 else ""
             c4.metric(f"Gap vs {champion_stats['Vs_Mate']}", f"{sign}{int(gap_val)} pts")
 
-        # Graphique Saison
-        st.subheader(f"Progression Saison {selected_year}")
+        # Season Chart
+        st.subheader(f"Season Progression {selected_year}")
         
         top_10_drivers = final_rankings.head(10)['Driver'].tolist()
         chart_data_season = data_year[data_year['Driver'].isin(top_10_drivers)].copy()
@@ -354,18 +354,18 @@ if df_raw is not None:
         )
         st.plotly_chart(fig_season, use_container_width=True)
         
-        # Tableau Domination Interne
-        st.subheader("Domination Interne (Pilote vs Coéquipier)")
+        # Internal Domination Table
+        st.subheader("Internal Domination (Driver vs Teammate)")
         st.dataframe(
             gap_df[['Driver', 'Team', 'Elo', 'Gap', 'Vs_Mate']].reset_index(drop=True),
             use_container_width=True,
             column_config={
                 "Elo": st.column_config.NumberColumn("Elo", format="%d"),
                 "Gap": st.column_config.NumberColumn("Gap vs Mate", format="%+d"),
-                "Vs_Mate": "Comparé à"
+                "Vs_Mate": "Compared to"
             },
             height=500
         )
 
 else:
-    st.warning("Impossible de charger les données CSV. Vérifiez le dossier 'data/'.")
+    st.warning("Cannot load CSV data. Please check the 'data/' folder.")

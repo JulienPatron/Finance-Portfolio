@@ -1,45 +1,45 @@
 import streamlit as st
 
-# Pas de set_page_config ici, il est géré par main.py
+# No set_page_config here, it is handled by main.py
 
-st.title("Bienvenue sur mon Portfolio")
+st.title("Welcome to my Portfolio")
 st.markdown("### Data Science & Engineering Projects")
 
 st.markdown("""
-Cette application regroupe trois projets techniques démontrant des compétences en **Finance Quantitative**, **Machine Learning (NLP)** et **Data Engineering**.
+This application showcases three technical projects demonstrating skills in **Quantitative Finance**, **Machine Learning (NLP)**, and **Data Engineering**.
 
-Veuillez sélectionner un projet dans la barre latérale pour commencer.
+Please select a project from the sidebar to explore them.
 """)
 
-# --- Présentation rapide des projets (Cartes) ---
+# --- Project Cards ---
 col1, col2, col3 = st.columns(3)
 
 with col1:
     st.subheader("📈 Finance")
     st.info("**Portfolio Optimizer**")
     st.markdown("""
-    Optimisation de portefeuille basée sur la théorie moderne (Markowitz).
+    Portfolio optimization based on Modern Portfolio Theory (Markowitz).
     * **Tech:** Yahoo Finance, Monte Carlo, Plotly.
-    * **Objectif:** Maximiser le ratio de Sharpe.
+    * **Goal:** Maximize the Sharpe Ratio.
     """)
 
 with col2:
-    st.subheader("🎬 Cinéma")
+    st.subheader("🎬 Cinema")
     st.info("**Movie Recommender**")
     st.markdown("""
-    Système de recommandation de films basé sur le contenu (Item-based).
+    Content-based movie recommendation system (Item-based).
     * **Tech:** Scikit-learn (KNN), TMDB API.
     * **Data:** MovieLens 32M Dataset.
     """)
 
 with col3:
-    st.subheader("🏎️ Formule 1")
+    st.subheader("🏎️ Formula 1")
     st.info("**F1 Elo System**")
     st.markdown("""
-    Classement historique des pilotes basé sur un algorithme Elo personnalisé.
+    Historical driver ranking based on a custom Elo algorithm.
     * **Tech:** Pandas, Plotly Interactive.
-    * **Data:** Analyse historique complète.
+    * **Data:** Comprehensive historical analysis.
     """)
 
 st.divider()
-st.caption("Développé par Julien Patron | Hébergé sur Streamlit Community Cloud")
+st.caption("Developed by Julien Patron | Hosted on Streamlit Community Cloud")
