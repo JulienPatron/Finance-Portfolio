@@ -125,6 +125,6 @@ with col4:
         # Description
         st.markdown("""
         <div class="desc-text">
-        Pricing tool based on the Black-Scholes-Merton model. It calculates the theoretical value of European options and visualizes the Greeks to assess risk sensitivity.
+        Pricing tool based on the Black-Scholes-Merton model. It calculates the theoretical value of European options.
         </div>
         """, unsafe_allow_html=True)
