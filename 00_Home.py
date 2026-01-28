@@ -18,7 +18,7 @@ st.markdown("""
         border-radius: 12px;
         font-size: 14px;
         font-weight: 600;
-        margin-bottom: 10px;
+        margin-bottom: 5px;
         color: #333;
     }
     .finance { background-color: #E3F2FD; color: #1565C0; } 
@@ -30,17 +30,24 @@ st.markdown("""
     .desc-text {
         font-size: 15px;
         color: #444;
-        line-height: 1.6;
+        line-height: 1.5;
     }
 
-    /* 4. EQUAL HEIGHT CARDS HACK */
+    /* 4. EQUAL HEIGHT CARDS HACK (CORRECTED) */
     /* Target the container with border */
     [data-testid="stVerticalBlockBorderWrapper"] > div {
-        min-height: 320px; /* Force all cards to be at least this tall */
+        min-height: 280px;      /* Force rigid height */
         height: 100%;
+        
+        /* Flex Layout Controls */
         display: flex;
         flex-direction: column;
-        justify-content: flex-start;
+        
+        /* ALIGNMENT FIX: Force content to top, not spread out */
+        justify-content: flex-start !important; 
+        
+        /* Spacing between elements (Title, Badge, Text) */
+        gap: 15px; 
     }
 </style>
 """, unsafe_allow_html=True)
