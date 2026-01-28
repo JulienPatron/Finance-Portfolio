@@ -7,24 +7,35 @@ st.set_page_config(
     initial_sidebar_state="expanded" 
 )
 
-# --- CSS FOR SIDEBAR NAME & STYLING ---
-# This inserts "Julien Patron" above the navigation menu
+# --- CSS: SIDEBAR STYLING ---
 st.markdown("""
 <style>
+    /* 1. SIDEBAR BACKGROUND COLOR */
+    [data-testid="stSidebar"] {
+        background-color: #F8F9FC; /* Very pale blue-grey */
+        border-right: 1px solid #E0E0E0; /* Subtle border on the right */
+    }
+
+    /* 2. NAME STYLING (Gradient Color) */
     /* Insert text above the navigation container */
     [data-testid="stSidebarNav"]::before {
         content: "Julien Patron";
         display: block;
-        font-size: 28px;  /* Text size */
-        font-weight: bold;
-        margin-bottom: 20px; /* Space between name and Home button */
-        margin-left: 20px;   /* Alignment */
-        color: var(--text-color);
+        font-size: 26px;  
+        font-weight: 800; /* Extra Bold */
+        margin-bottom: 25px; 
+        margin-left: 10px;
+        margin-top: 10px;
+        
+        /* Gradient Text Effect (Blue to Purple) */
+        background: linear-gradient(45deg, #1565C0, #7B1FA2);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
     }
     
-    /* Optional: Fine-tune the top padding if needed */
+    /* 3. Adjust Navigation Padding */
     div[data-testid="stSidebarNav"] {
-        padding-top: 1rem; 
+        padding-top: 0.5rem; 
     }
 </style>
 """, unsafe_allow_html=True)
@@ -57,7 +68,6 @@ f1_page = st.Page(
 )
 
 # --- 3. NAVIGATION SETUP ---
-# TRICK: using " " for Home hides the section title
 pg = st.navigation(
     {
         " ": [home_page],
