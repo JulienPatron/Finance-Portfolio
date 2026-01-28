@@ -39,8 +39,7 @@ st.markdown("""
 st.title("Project Portfolio")
 
 st.markdown("""
-This portfolio gathers Python projects applied to market finance and other areas of personal interest. 
-Below you will find interactive tools designed to solve specific analytical challenges.
+This portfolio gathers Python projects applied to market finance and other areas of personal interest.
 """)
 
 st.divider()
@@ -62,25 +61,21 @@ with col1:
         # Expanded Description
         st.markdown("""
         <div class="desc-text">
-        A comprehensive investment tool based on Modern Portfolio Theory (Markowitz). 
-        It processes historical market data to generate the Efficient Frontier, allowing users to visualize risk-return trade-offs 
-        and determine the optimal asset allocation for their specific financial goals.
+        Investment tool based on Modern Portfolio Theory. It visualizes the Efficient Frontier to identify the optimal asset allocation for a specific return target.
         </div>
         """, unsafe_allow_html=True)
 
 # 2. CINEMA PROJECT
 with col2:
     with st.container(border=True):
-        st.page_link("pages/03_Movie_Recommendation_System.py", label="**Movie Recommender**", use_container_width=True)
+        st.page_link("pages/03_Movie_Recommendation_System.py", label="**Movie Recommendation System**", use_container_width=True)
         
         # Domain Badge (Pale Purple)
         st.markdown('<span class="badge cinema">Cinema & NLP</span>', unsafe_allow_html=True)
         
         st.markdown("""
         <div class="desc-text">
-        An intelligent discovery engine leveraging content-based filtering techniques. 
-        By analyzing metadata and textual descriptions from the MovieLens 32M dataset, 
-        this system identifies similarity patterns to suggest movies that align with your unique viewing preferences.
+        Movie recommendation engine leveraging millions of user ratings to identify fan favorites similar to a selected title.
         </div>
         """, unsafe_allow_html=True)
 
@@ -94,16 +89,14 @@ col3, col4 = st.columns(2, gap="medium")
 # 3. F1 PROJECT
 with col3:
     with st.container(border=True):
-        st.page_link("pages/04_F1_Elo_System.py", label="**F1 Elo System**", use_container_width=True)
+        st.page_link("pages/04_F1_Elo_System.py", label="**F1 Elo Rating System**", use_container_width=True)
         
         # Domain Badge (Pale Red)
         st.markdown('<span class="badge f1">Formula 1 Sports Analysis</span>', unsafe_allow_html=True)
         
         st.markdown("""
         <div class="desc-text">
-        A robust historical ranking system for Formula 1 drivers using a custom Elo algorithm. 
-        Unlike standard points systems, this model accounts for teammate comparisons and field strength to objectively measure 
-        driver dominance across different eras of the sport.
+        Interactive dashboard applying the Chess Elo rating system to Formula 1 for historical performance analysis.
         </div>
         """, unsafe_allow_html=True)
 

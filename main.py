@@ -48,13 +48,13 @@ finance_page = st.Page(
 # Project 2: Cinema
 movie_page = st.Page(
     "pages/03_Movie_Recommendation_System.py", 
-    title="Movie Recommender"
+    title="Movie Movie Recommendation System"
 )
 
 # Project 3: F1
 f1_page = st.Page(
     "pages/04_F1_Elo_System.py", 
-    title="F1 Elo System"
+    title="F1 Elo Rating System"
 )
 
 # --- 3. NAVIGATION SETUP ---
