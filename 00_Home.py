@@ -31,7 +31,7 @@ st.markdown("""
         font-size: 15px;
         color: #444;
         line-height: 1.6;
-        margin-bottom: 20px; /* <--- C'EST ICI : Ajoute l'écart en bas */
+        margin-bottom: 20px;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -50,16 +50,11 @@ st.divider()
 # ROW 1
 col1, col2 = st.columns(2, gap="medium")
 
-# 1. FINANCE PROJECT
+# 1. FINANCE PROJECT (Portfolio)
 with col1:
     with st.container(border=True):
-        # Title (Clickable)
         st.page_link("01_Portfolio_Optimizer.py", label="**Portfolio Optimizer**", use_container_width=True)
-        
-        # Domain Badge (Pale Blue)
         st.markdown('<span class="badge finance">Market Finance</span>', unsafe_allow_html=True)
-        
-        # Expanded Description
         st.markdown("""
         <div class="desc-text">
         Investment tool based on Modern Portfolio Theory. It visualizes the Efficient Frontier to identify the optimal asset allocation for a specific return target.
@@ -70,10 +65,7 @@ with col1:
 with col2:
     with st.container(border=True):
         st.page_link("pages/03_Movie_Recommendation_System.py", label="**Movie Recommendation System**", use_container_width=True)
-        
-        # Domain Badge (Pale Purple)
         st.markdown('<span class="badge cinema">Cinema & NLP</span>', unsafe_allow_html=True)
-        
         st.markdown("""
         <div class="desc-text">
         Movie recommendation engine leveraging millions of user ratings to identify fan favorites similar to a selected title.
@@ -91,28 +83,25 @@ col3, col4 = st.columns(2, gap="medium")
 with col3:
     with st.container(border=True):
         st.page_link("pages/04_F1_Elo_System.py", label="**F1 Elo Rating System**", use_container_width=True)
-        
-        # Domain Badge (Pale Red)
         st.markdown('<span class="badge f1">Formula 1 Sports Analysis</span>', unsafe_allow_html=True)
-        
         st.markdown("""
         <div class="desc-text">
         Interactive dashboard applying the Chess Elo rating system to Formula 1 for historical performance analysis.
         </div>
         """, unsafe_allow_html=True)
 
-# 4. FUTURE PROJECT
+# 4. BLACK SCHOLES PROJECT (NEW)
 with col4:
     with st.container(border=True):
-        # Button is disabled but styled similarly
-        st.button("**Upcoming Project**", disabled=True, use_container_width=True)
+        # Title (Clickable)
+        st.page_link("05_Black_Scholes_Option_Pricer.py", label="**Black-Scholes Pricer**", use_container_width=True)
         
-        # Domain Badge (Pale Green)
-        st.markdown('<span class="badge data">Data Engineering</span>', unsafe_allow_html=True)
+        # Domain Badge (Using Finance Blue)
+        st.markdown('<span class="badge finance">Market Finance</span>', unsafe_allow_html=True)
         
+        # Description
         st.markdown("""
         <div class="desc-text">
-        Text Text Text Text Text Text Text Text Text Text Text Text Text 
-        Text Text Text Text Text Text Text Text Text Text Text 
+        Pricing tool based on the Black-Scholes-Merton model. It calculates the theoretical value of European options and visualizes the Greeks to assess risk sensitivity.
         </div>
         """, unsafe_allow_html=True)
