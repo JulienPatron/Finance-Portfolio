@@ -36,7 +36,7 @@ st.markdown("""
     /* 4. EQUAL HEIGHT CARDS HACK */
     /* Target the container with border */
     [data-testid="stVerticalBlockBorderWrapper"] > div {
-        min-height: 280px; /* Force all cards to be at least this tall */
+        min-height: 320px; /* Force all cards to be at least this tall */
         height: 100%;
         display: flex;
         flex-direction: column;
