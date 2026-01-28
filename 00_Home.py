@@ -112,8 +112,7 @@ with col4:
         
         st.markdown("""
         <div class="desc-text">
-        A new infrastructure project is currently under active development. 
-        This application will focus on advanced data pipeline automation and cloud engineering concepts, 
-        expanding the technical scope of this portfolio.
+        Text Text Text Text Text Text Text Text Text Text Text Text Text 
+        Text Text Text Text Text Text Text Text Text Text Text 
         </div>
         """, unsafe_allow_html=True)
