@@ -119,8 +119,8 @@ with col4:
         # Title (Clickable) - Pointing to pages/ folder
         st.page_link("pages/05_Black_Scholes_Option_Pricer.py", label="**Black-Scholes Pricer**", use_container_width=True)
         
-        # Domain Badge (Using Finance Blue)
-        st.markdown('<span class="badge finance">Market Finance</span>', unsafe_allow_html=True)
+        # Domain Badge (CHANGED TO GREEN 'data')
+        st.markdown('<span class="badge data">Market Finance</span>', unsafe_allow_html=True)
         
         # Description
         st.markdown("""
