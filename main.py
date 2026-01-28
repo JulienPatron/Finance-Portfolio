@@ -7,67 +7,71 @@ st.set_page_config(
     initial_sidebar_state="expanded" 
 )
 
-# --- CSS FOR SIDEBAR STYLING ---
+# --- CSS: SIDEBAR STYLING ---
 st.markdown("""
 <style>
-    /* 1. Sidebar Background Color */
-    [data-testid="stSidebar"] {
-        background-color: #F8F9FB; /* Very light grey-blue */
-        border-right: 1px solid #E6E9EF;
-    }
-
-    /* 2. "Julien Patron" Name Styling */
+    /* 1. "Julien Patron" Name (Top Left) - Keep Dark/Neutral */
     [data-testid="stSidebarNav"]::before {
         content: "Julien Patron";
         display: block;
-        font-size: 26px;
-        font-weight: 800; /* Extra bold */
-        color: #1E3A8A;   /* Royal Blue (Professional) */
-        margin-bottom: 25px;
+        font-size: 28px;
+        font-weight: bold;
+        margin-bottom: 20px;
         margin-left: 20px;
-        margin-top: 10px;
-    }
-
-    /* 3. Navigation Section Headers (Finance, Other) */
-    div[data-testid="stSidebarNav"] h4 {
-        color: #64748B; /* Slate grey for section titles */
-        font-size: 14px;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        padding-left: 10px;
+        color: var(--text-color); /* Neutral Dark */
     }
     
-    /* Optional: Style the active link to pop a bit more */
-    .st-emotion-cache-16txtl3 {
-        color: #1E3A8A !important;
-        font-weight: 600;
+    /* 2. Adjust Spacing */
+    div[data-testid="stSidebarNav"] {
+        padding-top: 1rem; 
     }
+
+    /* 3. Color Coding for Section Headers */
+    
+    /* Target the Section Headers within the navigation */
+    /* Note: Streamlit renders section headers as span elements inside a specific div structure. 
+       We target them by order (nth-of-type) to apply specific colors. */
+
+    /* "Finance" Header (2nd Section, assuming " " is 1st) -> BLUE */
+    div[data-testid="stSidebarNav"] > ul:nth-of-type(2) span {
+        color: #1565C0 !important; /* Matches Home Finance Badge */
+        font-weight: 800;
+        font-size: 14px;
+    }
+
+    /* "Other" Header (3rd Section) -> PURPLE */
+    div[data-testid="stSidebarNav"] > ul:nth-of-type(3) span {
+        color: #7B1FA2 !important; /* Matches Home Cinema Badge */
+        font-weight: 800;
+        font-size: 14px;
+    }
+    
+    /* Optional: Style the active page background to be subtle gray */
+    .st-emotion-cache-16txtl3 {
+        background-color: #f0f2f6;
+    }
+
 </style>
 """, unsafe_allow_html=True)
 
 # --- 2. PAGE DEFINITIONS ---
 
-# Landing Page
 home_page = st.Page(
     "00_Home.py", 
     title="Home", 
     default=True
 )
 
-# Project 1: Finance
 finance_page = st.Page(
     "01_Portfolio_Optimizer.py", 
     title="Portfolio Optimizer"
 )
 
-# Project 2: Cinema
 movie_page = st.Page(
     "pages/03_Movie_Recommendation_System.py", 
     title="Movie Recommender"
 )
 
-# Project 3: F1
 f1_page = st.Page(
     "pages/04_F1_Elo_System.py", 
     title="F1 Elo System"
@@ -76,9 +80,9 @@ f1_page = st.Page(
 # --- 3. NAVIGATION SETUP ---
 pg = st.navigation(
     {
-        " ": [home_page],
-        "Finance": [finance_page],
-        "Other": [movie_page, f1_page] 
+        " ": [home_page],              # Header invisible
+        "Finance": [finance_page],     # Header will be BLUE
+        "Other": [movie_page, f1_page] # Header will be PURPLE
     }
 )
 
