@@ -42,7 +42,7 @@ finance_page_1 = st.Page(
 )
 
 finance_page_2 = st.Page(
-    "05_Black_Scholes_Option_Pricer.py", 
+    "pages/05_Black_Scholes_Option_Pricer.py", 
     title="Black-Scholes Pricer"
 )
 
