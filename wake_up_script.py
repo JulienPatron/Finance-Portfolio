@@ -12,7 +12,7 @@ PROJECT_URL = "https://julien-patron-projects.streamlit.app/F1_Elo_System"
 
 def wake_up_app():
     # 1. JITTER : Délai aléatoire (30s à 3min) pour simuler un humain
-    delay = random.randint(1, 2)
+    delay = random.randint(60, 180)
     print(f"🕒 Pause aléatoire de {delay} secondes...")
     time.sleep(delay)
 
