@@ -1,0 +1,32 @@
+name: Wake Up Streamlit App
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  
+  # Permet de lancer l'action manuellement depuis GitHub pour tester
+  workflow_dispatch:
+
+jobs:
+  run-bot:
+    runs-on: ubuntu-latest
+    
+    steps:
+    # 1. Récupère ton code
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    # 2. Installe Python
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+
+    # 3. Installe Selenium (le pilote de navigateur)
+    - name: Install Selenium
+      run: |
+        pip install selenium
+
+    # 4. Lance ton script
+    - name: Run Wake Up Script
+      run: python wake_up_script.py
