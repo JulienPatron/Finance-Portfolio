@@ -88,7 +88,7 @@ with col2:
         
         st.markdown("""
         <div class="desc-text">
-        Movie recommendation engine leveraging millions of user ratings to identify fan favorites similar to a selected title.
+        Movie recommendation engine using millions of user ratings to identify fan favorites similar to a selected title.
         </div>
         """, unsafe_allow_html=True)
 
