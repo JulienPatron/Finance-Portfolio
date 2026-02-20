@@ -222,7 +222,7 @@ if df_raw is not None:
         
         Every driver starts their career with a baseline rating of 1500.
         
-        After each race, ratings are updated based on two key components:
+        After each race, ratings are updated based on two components:
         1. Teammate Battle (High Weight): It isolates pure skill by comparing a driver's result against the only opponent in equal car.
         2. Field Battle (Low Weight): It reflects the driver's overall finishing position compared to the rest of the grid.
         """)

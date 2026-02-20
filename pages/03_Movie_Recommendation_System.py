@@ -156,7 +156,7 @@ st.markdown(" Movie recommendation engine using millions of user ratings to iden
 # Selector
 idx = int(df[df['title'] == st.session_state['movie']].index[0]) if st.session_state['movie'] in df['title'].values else None
 selected = st.selectbox(
-    "Search for a reference movie:", 
+    "Search for a reference movie released before June 2023:", 
     df['title'].values, 
     index=idx, 
     placeholder="Type a title (e.g. Inception)..."
