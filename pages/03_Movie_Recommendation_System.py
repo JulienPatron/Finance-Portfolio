@@ -151,7 +151,7 @@ def update_selection(title):
     st.session_state['movie'] = title
 
 st.title("Movie Recommendation System")
-st.markdown(" Movie recommendation engine using millions of user ratings to identify fan favorites similar to a selected title.")
+st.markdown(" Movie recommendation engine using millions of user ratings to identify fan favorites based on a selected title.")
 
 # Selector
 idx = int(df[df['title'] == st.session_state['movie']].index[0]) if st.session_state['movie'] in df['title'].values else None
