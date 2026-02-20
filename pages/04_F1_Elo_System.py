@@ -218,13 +218,13 @@ if df_raw is not None:
     with st.sidebar:
         st.header("Description")
         st.info("""
-        This dashboard adapts the traditional **Chess Elo rating system** to Formula 1 to evaluate historical driver performance. 
+        This dashboard adapts the traditional Chess Elo rating system to Formula 1 to evaluate historical driver performance. 
         
-        **The Baseline:** Every driver starts their career with a baseline rating of **1500**.
+        Every driver starts their career with a baseline rating of 1500.
         
-        **The Evolution:** After each race, ratings are updated based on two key components:
-        1. **Teammate Battle (High Weight):** It isolates pure skill by comparing a driver's result against the only opponent in equal car.
-        2. **Field Battle (Low Weight):** It reflects the driver's overall finishing position compared to the rest of the grid.
+        After each race, ratings are updated based on two key components:
+        1. Teammate Battle (High Weight): It isolates pure skill by comparing a driver's result against the only opponent in equal car.
+        2. Field Battle (Low Weight): It reflects the driver's overall finishing position compared to the rest of the grid.
         """)
 
     # --- NAVIGATION (REMPLACE LES TABS) ---

@@ -49,7 +49,7 @@ st.markdown("""
         text-align: center;
         font-size: 14px;
         margin-bottom: 5px;
-        color: #fafafa; /* À adapter selon ton thème sombre/clair */
+        color: #000000; /* Modification ici : couleur noire */
     }
 </style>
 """, unsafe_allow_html=True)
