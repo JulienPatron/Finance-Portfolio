@@ -62,7 +62,7 @@ n_simulations = 5000 # Slightly reduced for Free Tier responsiveness, sufficient
 # ==============================================================================
 
 st.title("Portfolio Optimizer")
-st.markdown("Modern Portfolio Theory (Markowitz) & Capital Allocation Line.")
+st.markdown("Investment tool based on Modern Portfolio Theory. It visualizes the Efficient Frontier to identify the optimal asset allocation for a specific return target.")
 st.markdown("---")
 
 # --- DATA PREP ---

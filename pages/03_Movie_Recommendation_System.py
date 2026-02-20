@@ -44,6 +44,13 @@ st.markdown("""
         align-items: center; 
         justify-content: center;
     }
+    /* Ajout d'une classe pour centrer le texte du Match */
+    .match-text {
+        text-align: center;
+        font-size: 14px;
+        margin-bottom: 5px;
+        color: #fafafa; /* À adapter selon ton thème sombre/clair */
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -144,7 +151,7 @@ def update_selection(title):
     st.session_state['movie'] = title
 
 st.title("Movie Recommendation System")
-st.markdown(" Movie recommendation engine leveraging millions of user ratings to identify fan favorites similar to a selected title.")
+st.markdown(" Movie recommendation engine using millions of user ratings to identify fan favorites similar to a selected title.")
 
 # Selector
 idx = int(df[df['title'] == st.session_state['movie']].index[0]) if st.session_state['movie'] in df['title'].values else None
@@ -218,11 +225,12 @@ if selected and (go_btn or st.session_state['movie']):
             # Title
             st.markdown(f'<div class="movie-title">{neighbor_title}</div>', unsafe_allow_html=True)
             
-            # Match Bar
-            st.progress(match_score, text=f"Match: {match_score}%")
+            # Match Bar (Centré via HTML et texte retiré de la progress bar)
+            st.markdown(f'<div class="match-text">Match: {match_score}%</div>', unsafe_allow_html=True)
+            st.progress(match_score)
             
-            # Rating (Fixing the HTML bug here)
-            st.markdown(f'<div class="movie-meta">{n_info["rating"]}</div>', unsafe_allow_html=True)
+            # Rating (Ajout de "Rating: ")
+            st.markdown(f'<div class="movie-meta">Rating: {n_info["rating"]}</div>', unsafe_allow_html=True)
 
             # Streaming Logos
             if n_info['streaming']:

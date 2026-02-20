@@ -216,12 +216,15 @@ if df_raw is not None:
 
     # --- SIDEBAR ---
     with st.sidebar:
-        st.header("Methodology")
+        st.header("Description")
         st.info("""
-        **Elo Principle:** Every driver starts at 1500.
-        **Key Factors:**
-        1. **Teammate Battle (High K):** Performance relative to the car.
-        2. **Track Position (Low K):** Overall performance against the field.
+        This dashboard adapts the traditional **Chess Elo rating system** to Formula 1 to evaluate historical driver performance. 
+        
+        **The Baseline:** Every driver starts their career with a baseline rating of **1500**.
+        
+        **The Evolution:** After each race, ratings are updated based on two key components:
+        1. **Teammate Battle (High Weight):** It isolates pure skill by comparing a driver's result against the only opponent in equal car.
+        2. **Field Battle (Low Weight):** It reflects the driver's overall finishing position compared to the rest of the grid.
         """)
 
     # --- NAVIGATION (REMPLACE LES TABS) ---
@@ -237,7 +240,7 @@ if df_raw is not None:
 
     # --- VIEW 1 : ALL TIME ---
     if nav_selection == "All-Time History":
-        st.subheader("Driver Comparator")
+        st.subheader("1. Driver Comparator")
         
         col_graph, col_select = st.columns([3.5, 1])
         
@@ -271,7 +274,7 @@ if df_raw is not None:
         col_goat, col_peak = st.columns(2)
 
         with col_goat:
-            st.subheader("History of the Record")
+            st.subheader("2. History of the Record")
             # Calculate record holder over time
             df_sorted = df_elo.sort_values(by='Date')
             goat_records = []
@@ -296,7 +299,7 @@ if df_raw is not None:
             st.plotly_chart(fig_goat, use_container_width=True)
 
         with col_peak:
-            st.subheader("Highest Peaks (Max Elo)")
+            st.subheader("3. Highest Peaks (Max Elo)")
             idx = df_elo.groupby(['Driver'])['Elo'].idxmax()
             best_elo_df = df_elo.loc[idx].sort_values(by='Elo', ascending=False).head(20).reset_index(drop=True)
             best_elo_df.index += 1
@@ -343,7 +346,7 @@ if df_raw is not None:
             c4.metric(f"Gap vs {champion_stats['Vs_Mate']}", f"{sign}{int(gap_val)} pts")
 
         # Season Chart
-        st.subheader(f"Season Progression {selected_year}")
+        st.subheader(f"1. Season Progression {selected_year}")
         
         top_10_drivers = final_rankings.head(10)['Driver'].tolist()
         chart_data_season = data_year[data_year['Driver'].isin(top_10_drivers)].copy()
@@ -361,7 +364,7 @@ if df_raw is not None:
         st.plotly_chart(fig_season, use_container_width=True)
         
         # Internal Domination Table
-        st.subheader("Internal Domination (Driver vs Teammate)")
+        st.subheader("1. Driver vs Teammate")
         st.dataframe(
             gap_df[['Driver', 'Team', 'Elo', 'Gap', 'Vs_Mate']].reset_index(drop=True),
             use_container_width=True,
