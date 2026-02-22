@@ -125,6 +125,6 @@ with col4:
         # Description
         st.markdown("""
         <div class="desc-text">
-        Analytical tool based on the Capital Asset Pricing Model (CAPM) to identify undervalued stocks using the Security Market Line.
+        Tool based on the Capital Asset Pricing Model (CAPM) to identify undervalued stocks using the Security Market Line.
         </div>
         """, unsafe_allow_html=True)

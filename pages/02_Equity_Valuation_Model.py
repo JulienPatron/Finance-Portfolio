@@ -40,7 +40,7 @@ years_back = st.sidebar.slider("Historical Data (Years)", min_value=1, max_value
 # 2. DATA ENGINE
 # ==============================================================================
 st.title("Equity Valuation Model (CAPM)")
-st.markdown("Analytical tool based on the Capital Asset Pricing Model (CAPM) to identify undervalued stocks using the Security Market Line.")
+st.markdown("Tool based on the Capital Asset Pricing Model (CAPM) to identify undervalued stocks using the Security Market Line.")
 st.markdown("---")
 
 if not tickers or not benchmark_input:
