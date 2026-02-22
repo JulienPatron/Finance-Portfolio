@@ -238,12 +238,12 @@ with st.spinner('Fetching Market Data & Running Regression...'):
 
         st.plotly_chart(fig, use_container_width=True)
 
-    # --- TABLE: DETAILS ---
+# --- TABLE: DETAILS ---
     with col_table:
         st.subheader("Alpha Generation")
         
-        # Ajout de la colonne 'Company' pour l'affichage
-        df_display = df_capm[['Company', 'Beta', 'Alpha (%)', 'Valuation']].copy()
+        # Réorganisation de l'ordre : Company -> Valuation (Signal) -> Beta -> Alpha
+        df_display = df_capm[['Company', 'Valuation', 'Beta', 'Alpha (%)']].copy()
         df_display = df_display.sort_values(by='Alpha (%)', ascending=False)
         
         # Formatage pour l'affichage propre
@@ -259,6 +259,8 @@ with st.spinner('Fetching Market Data & Running Regression...'):
                     "Signal",
                     help="Undervalued = Above SML",
                     width="medium"
-                )
+                ),
+                "Beta": "Beta",
+                "Alpha (%)": "Alpha"
             }
         )
