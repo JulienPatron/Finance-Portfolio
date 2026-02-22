@@ -26,7 +26,7 @@ st.markdown("""
 st.sidebar.header("Configuration")
 
 # A. Assets
-default_tickers = "AAPL, MSFT, TSLA, NVDA, JPM, KO, XOM"
+default_tickers = "AAPL, MSFT, TSLA, JPM, KO, WMT, V, BA, ADBE, NKE, KKR, GM"
 tickers_input = st.sidebar.text_input("Stocks (comma separated)", value=default_tickers)
 tickers = [x.strip().upper() for x in tickers_input.split(',') if x.strip()]
 
@@ -39,8 +39,8 @@ years_back = st.sidebar.slider("Historical Data (Years)", min_value=1, max_value
 # ==============================================================================
 # 2. DATA ENGINE
 # ==============================================================================
-st.title("Equity Valuation Engine (CAPM)")
-st.markdown("Capital Asset Pricing Model Analysis: Identify undervalued securities using the Security Market Line and Jensen's Alpha.")
+st.title("Equity Valuation Model (CAPM)")
+st.markdown("Analytical tool based on the Capital Asset Pricing Model (CAPM) to identify undervalued stocks using the Security Market Line.")
 st.markdown("---")
 
 if not tickers or not benchmark_input:
@@ -211,7 +211,6 @@ with st.spinner('Fetching Market Data & Running Regression...'):
             x=df_capm['Beta'], 
             y=df_capm['Actual Return'], 
             mode='markers+text',
-            name='Assets',
             text=df_capm.index,
             textposition="top center",
             marker=dict(size=14, color=colors, line=dict(width=1, color='white')),
