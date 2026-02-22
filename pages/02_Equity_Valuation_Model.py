@@ -150,9 +150,16 @@ with st.spinner('Fetching Market Data & Running Regression...'):
         mkt_annual_ret = df_reg['Market'].mean() * TRADING_DAYS + rf_history_avg
         expected_return = rf_current + beta * (mkt_annual_ret - rf_current)
         actual_return = df_reg['Stock'].mean() * TRADING_DAYS + rf_history_avg
+        
+        # Récupération du nom de l'entreprise
+        try:
+            company_name = yf.Ticker(ticker).info.get('shortName', ticker)
+        except:
+            company_name = ticker
 
         capm_data.append({
             'Ticker': ticker,
+            'Company': company_name,
             'Beta': beta,
             'Alpha (%)': alpha_annual,
             'Actual Return': actual_return,
@@ -213,6 +220,7 @@ with st.spinner('Fetching Market Data & Running Regression...'):
             mode='markers+text',
             text=df_capm.index,
             textposition="top center",
+            showlegend=False, # <-- MODIFICATION ICI : Cache la légende pour les points
             marker=dict(size=14, color=colors, line=dict(width=1, color='white')),
             hovertemplate="<b>%{text}</b><br>Beta: %{x:.2f}<br>Return: %{y:.1%}<extra></extra>"
         ))
@@ -234,7 +242,8 @@ with st.spinner('Fetching Market Data & Running Regression...'):
     with col_table:
         st.subheader("Alpha Generation")
         
-        df_display = df_capm[['Beta', 'Alpha (%)', 'Valuation']].copy()
+        # Ajout de la colonne 'Company' pour l'affichage
+        df_display = df_capm[['Company', 'Beta', 'Alpha (%)', 'Valuation']].copy()
         df_display = df_display.sort_values(by='Alpha (%)', ascending=False)
         
         # Formatage pour l'affichage propre
@@ -245,6 +254,7 @@ with st.spinner('Fetching Market Data & Running Regression...'):
             df_display,
             use_container_width=True,
             column_config={
+                "Company": "Company Name",
                 "Valuation": st.column_config.TextColumn(
                     "Signal",
                     help="Undervalued = Above SML",
