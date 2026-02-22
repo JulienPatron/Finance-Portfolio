@@ -117,7 +117,7 @@ with col3:
 with col4:
     with st.container(border=True):
         # Title (Clickable) - Pointing to pages/ folder
-        st.page_link("pages/05_Black_Scholes_Option_Pricer.py", label="**Black-Scholes Pricer**", use_container_width=True)
+        st.page_link("pages/02_Equity_Valuation_Model.py", label="**Equity Valuation Model (CAPM)**", use_container_width=True)
         
         # Domain Badge (CHANGED TO GREEN 'data')
         st.markdown('<span class="badge data">Market Finance</span>', unsafe_allow_html=True)
@@ -125,6 +125,6 @@ with col4:
         # Description
         st.markdown("""
         <div class="desc-text">
-        Pricing tool based on the Black-Scholes-Merton model. It calculates the theoretical value of European options.
+        Analytical tool based on the Capital Asset Pricing Model (CAPM) to identify undervalued stocks using the Security Market Line.
         </div>
         """, unsafe_allow_html=True)
