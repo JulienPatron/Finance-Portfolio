@@ -2,24 +2,19 @@ import streamlit as st
 import yfinance as yf
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
-import matplotlib.ticker as mtick
+import plotly.graph_objects as go
 import datetime
 
 # --- PAGE CONFIGURATION ---
-st.set_page_config(
-    page_title="Project Portfolio - Julien Patron",
-    layout="wide"
-)
-sns.set_theme(style="white", context="paper", font_scale=1.1)
+# Note: st.set_page_config is usually handled by main.py if this is a multipage app
+# st.set_page_config(page_title="Project Portfolio - Julien Patron", layout="wide")
 
-# --- CSS STYLING (Bloomberg Style) ---
+# --- CSS STYLING ---
 st.markdown("""
 <style>
     .block-container {padding-top: 1rem;}
     h1, h2, h3 {font-family: 'Roboto', sans-serif; font-weight: 400;}
-    /* Metrics styling adjusted for Dark Mode compatibility (transparent background) */
+    /* Metrics styling adjusted for Dark Mode compatibility */
     .stMetric {padding: 5px; border-radius: 5px;} 
     footer {visibility: hidden;}
 </style>
@@ -45,7 +40,7 @@ years_back = st.sidebar.slider("Historical Data (Years)", min_value=1, max_value
 # 2. DATA ENGINE
 # ==============================================================================
 st.title("Equity Valuation Engine (CAPM)")
-st.markdown("Capital Asset Pricing Model Analysis: Identify undervalued securities (Jensen's Alpha).")
+st.markdown("Capital Asset Pricing Model Analysis: Identify undervalued securities using the Security Market Line and Jensen's Alpha.")
 st.markdown("---")
 
 if not tickers or not benchmark_input:
@@ -78,7 +73,7 @@ with st.spinner('Fetching Market Data & Running Regression...'):
                 rf_current = rf_current.iloc[0]
             rf_history_avg = rf_series.mean()
             if isinstance(rf_history_avg, pd.Series):
-                 rf_history_avg = rf_history_avg.iloc[0]
+                rf_history_avg = rf_history_avg.iloc[0]
         else:
             rf_current = 0.04
             rf_history_avg = 0.04
@@ -173,7 +168,7 @@ with st.spinner('Fetching Market Data & Running Regression...'):
     df_capm = pd.DataFrame(capm_data).set_index('Ticker')
 
     # ==============================================================================
-    # 4. VISUALIZATION DASHBOARD
+    # 4. VISUALIZATION DASHBOARD (PLOTLY INTERACTIVE)
     # ==============================================================================
 
     # --- SIDEBAR METRICS ---
@@ -188,35 +183,53 @@ with st.spinner('Fetching Market Data & Running Regression...'):
     # --- MAIN CONTENT ---
     col_chart, col_table = st.columns([2, 1])
 
-    # --- CHART: SML ---
+    # --- CHART: SML (Plotly) ---
     with col_chart:
         st.subheader("Security Market Line (SML)")
         
-        fig, ax = plt.subplots(figsize=(10, 6))
+        fig = go.Figure()
         
         max_beta = df_capm['Beta'].max()
         if pd.isna(max_beta) or max_beta < 0.5: max_beta = 1.5
             
+        # Création de la ligne SML
         x_range = np.linspace(0, max_beta * 1.2, 100)
         y_sml = rf_current + x_range * (mkt_return_ann - rf_current)
         
-        ax.plot(x_range, y_sml, color='#555555', linestyle='--', linewidth=2, label='SML (Fair Value)', alpha=0.8)
+        fig.add_trace(go.Scatter(
+            x=x_range, 
+            y=y_sml, 
+            mode='lines', 
+            name='SML (Fair Value)', 
+            line=dict(color='gray', dash='dash', width=2)
+        ))
 
+        # Création des points pour les actions
         colors = ['#228B22' if val == 'Undervalued' else '#D90429' for val in df_capm['Valuation']]
         
-        ax.scatter(df_capm['Beta'], df_capm['Actual Return'], c=colors, s=100, zorder=5, edgecolors='white', linewidth=1)
-        
-        for ticker, row in df_capm.iterrows():
-            ax.text(row['Beta'], row['Actual Return'] + 0.005, f"  {ticker}", fontsize=9, fontweight='bold')
+        fig.add_trace(go.Scatter(
+            x=df_capm['Beta'], 
+            y=df_capm['Actual Return'], 
+            mode='markers+text',
+            name='Assets',
+            text=df_capm.index,
+            textposition="top center",
+            marker=dict(size=14, color=colors, line=dict(width=1, color='white')),
+            hovertemplate="<b>%{text}</b><br>Beta: %{x:.2f}<br>Return: %{y:.1%}<extra></extra>"
+        ))
 
-        ax.set_xlabel('Beta (Systematic Risk)')
-        ax.set_ylabel('Annualized Return')
-        ax.yaxis.set_major_formatter(mtick.PercentFormatter(1.0, decimals=0))
-        ax.set_xlim(left=0)
-        ax.grid(True, alpha=0.2)
-        ax.legend(loc='upper left')
+        fig.update_layout(
+            xaxis_title='Beta (Systematic Risk)',
+            yaxis_title='Annualized Return',
+            yaxis_tickformat='.0%',
+            xaxis=dict(range=[0, max_beta * 1.2]),
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
+            legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01),
+            margin=dict(l=0, r=0, t=30, b=0)
+        )
 
-        st.pyplot(fig, use_container_width=True)
+        st.plotly_chart(fig, use_container_width=True)
 
     # --- TABLE: DETAILS ---
     with col_table:
@@ -225,6 +238,7 @@ with st.spinner('Fetching Market Data & Running Regression...'):
         df_display = df_capm[['Beta', 'Alpha (%)', 'Valuation']].copy()
         df_display = df_display.sort_values(by='Alpha (%)', ascending=False)
         
+        # Formatage pour l'affichage propre
         df_display['Alpha (%)'] = df_display['Alpha (%)'].apply(lambda x: f"{x:.2%}")
         df_display['Beta'] = df_display['Beta'].apply(lambda x: f"{x:.2f}")
 
