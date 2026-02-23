@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import os
-import plotly.express as px
+import plotly.express as px # Import déplacé ici pour éviter les problèmes de portée
 
 # Note: No set_page_config, handled by main.py
 
@@ -10,8 +10,7 @@ import plotly.express as px
 # ==============================================================================
 
 class F1EloRating:
-    # Ajustement des K-factors pour permettre une montée de 1000 à 3000
-    def __init__(self, k_team_max=120, k_field=20):
+    def __init__(self, k_team_max=32, k_field=5):
         self.k_team_max = k_team_max 
         self.k_field = k_field       
 
@@ -60,24 +59,30 @@ class F1EloRating:
 @st.cache_data(show_spinner=False)
 def load_and_clean_data():
     try:
+        # Smart path handling (root vs pages dir)
         base_dir = "data"
         if not os.path.exists(base_dir):
-            base_dir = "../data" 
+            base_dir = "../data" # Fallback if executed from subfolder
             
+        # Optimized loading with specific types
         races = pd.read_csv(f"{base_dir}/races.csv")
         results = pd.read_csv(f"{base_dir}/results.csv")
         drivers = pd.read_csv(f"{base_dir}/drivers.csv")
         constructors = pd.read_csv(f"{base_dir}/constructors.csv")
         
+        # Merge
         df = pd.merge(results, races[['raceId', 'year', 'round', 'name', 'date']], on='raceId', how='left')
         df = pd.merge(df, drivers[['driverId', 'code', 'forename', 'surname']], on='driverId', how='left')
         df = pd.merge(df, constructors[['constructorId', 'name']], on='constructorId', how='left')
         
+        # Rename and Create columns
         df = df.rename(columns={'year': 'Year', 'round': 'Round', 'name_x': 'GP_Name', 'name_y': 'Team', 'positionOrder': 'Position', 'date': 'Date'})
         df['Full_Name'] = df['forename'] + " " + df['surname']
         
+        # Date Conversion (Time optimization)
         df['Date'] = pd.to_datetime(df['Date'])
         
+        # Cleaning
         df = df.sort_values(by=['Year', 'Round', 'Position'])
         df = df.drop_duplicates(subset=['Year', 'Round', 'driverId'], keep='first')
         
@@ -96,38 +101,45 @@ def compute_elo_history(df):
     current_ratings = {}
     history_records = []
     
+    # GroupBy preserves chronological order if DF is sorted
     races = df.groupby(['Year', 'Round', 'Date', 'GP_Name'], sort=False)
     
+    # Progress Bar
     prog_bar = st.sidebar.progress(0, text="Initializing Elo Engine...")
     total_races = len(races)
     
     for i, ((year, round_num, date, gp), race_df) in enumerate(races):
+        # Update UI less frequently to gain performance
         if i % 50 == 0: 
             prog_bar.progress(i / total_races, text=f"Calculating season {year}...")
         
+        # Prepare data structures for the race
         race_drivers = []
         for _, row in race_df.iterrows():
             d_id = row['driverId']
             if d_id not in current_ratings:
-                # MODIFICATION ICI : Les pilotes commencent désormais à 1000
-                current_ratings[d_id] = 1000.0
+                current_ratings[d_id] = 1500.0
             
             race_drivers.append({
                 'id': d_id, 'name': row['Full_Name'], 'team': row['Team'],
                 'pos': row['Position'], 'rating': current_ratings[d_id]
             })
             
+        # Calculate deltas
         updates = {}
         for driver in race_drivers:
+            # Filter teammates vs rest of the field
             teammates = [d for d in race_drivers if d['team'] == driver['team'] and d['id'] != driver['id']]
             field = [d for d in race_drivers if d['team'] != driver['team']]
             
             updates[driver['id']] = engine.calculate_update(driver['rating'], driver['pos'], teammates, field)
             
+        # Apply updates
         for driver in race_drivers:
             new_rating = driver['rating'] + updates[driver['id']]
             current_ratings[driver['id']] = new_rating
             
+            # Store history
             history_records.append({
                 'Date': date, 'Year': year, 'Driver': driver['name'],
                 'Elo': new_rating, 'Team': driver['team']
@@ -138,17 +150,21 @@ def compute_elo_history(df):
 
 def calculate_teammate_gaps(final_rankings):
     gap_data = []
+    # Vector optimization difficult here, keeping the loop
     for _, row in final_rankings.iterrows():
         driver = row['Driver']
         team = row['Team']
         elo = row['Elo']
         
+        # Find teammate
         teammates = final_rankings[(final_rankings['Team'] == team) & (final_rankings['Driver'] != driver)]
         
         gap = 0
         mate_name = "None"
         
         if not teammates.empty:
+            # Take the closest teammate in terms of Elo (case where there are 3 drivers)
+            # or simply the other driver
             teammates = teammates.copy()
             teammates['diff_abs'] = (teammates['Elo'] - elo).abs()
             closest_mate = teammates.sort_values('diff_abs').iloc[0]
@@ -164,9 +180,11 @@ def calculate_teammate_gaps(final_rankings):
 # 4. USER INTERFACE
 # ==============================================================================
 
+# Optimized CSS
 st.markdown("""
 <style>
     .block-container { padding-top: 1rem; }
+    /* Navigation Style - Simulates Tabs but stronger */
     div[data-testid="stRadio"] > div {
         display: flex;
         justify-content: flex-start;
@@ -174,11 +192,13 @@ st.markdown("""
         margin-bottom: 20px;
         background-color: transparent;
     }
+    /* Driver Tags */
     span[data-baseweb="tag"] {
         background-color: #DBE6F7 !important; 
         color: #095AA7 !important;
         border: 1px solid #bee5eb;
     }
+    /* Metrics */
     div[data-testid="stMetricValue"] { font-size: 24px; }
 </style>
 """, unsafe_allow_html=True)
@@ -189,22 +209,26 @@ with st.spinner("Loading F1 history..."):
     df_raw = load_and_clean_data()
 
 if df_raw is not None:
+    # Calculate or retrieve Elo cache
     if 'elo_data' not in st.session_state:
         st.session_state['elo_data'] = compute_elo_history(df_raw)
     df_elo = st.session_state['elo_data']
 
+    # --- SIDEBAR ---
     with st.sidebar:
         st.header("Description")
         st.info("""
         This dashboard adapts the traditional Chess Elo rating system to Formula 1 to evaluate historical driver performance. 
         
-        Every driver starts their career with a baseline rating of 1000.
+        Every driver starts their career with a baseline rating of 1500.
         
         After each race, ratings are updated based on two components:
         1. Teammate Battle (High Weight): It isolates pure skill by comparing a driver's result against the only opponent in equal car.
         2. Field Battle (Low Weight): It reflects the driver's overall finishing position compared to the rest of the grid.
         """)
 
+    # --- NAVIGATION (REMPLACE LES TABS) ---
+    # Utilisation de st.radio horizontal pour persister l'état lors du changement d'année
     nav_selection = st.radio(
         "Navigation", 
         ["All-Time History", "By Season"], 
@@ -214,6 +238,7 @@ if df_raw is not None:
 
     st.divider()
 
+    # --- VIEW 1 : ALL TIME ---
     if nav_selection == "All-Time History":
         st.subheader("1. Driver Comparator")
         
@@ -250,6 +275,7 @@ if df_raw is not None:
 
         with col_goat:
             st.subheader("2. History of the Record")
+            # Calculate record holder over time
             df_sorted = df_elo.sort_values(by='Date')
             goat_records = []
             current_max = 0
@@ -263,7 +289,7 @@ if df_raw is not None:
             
             fig_goat = px.scatter(
                 df_goat, x='Date', y='Elo', color='Driver',
-                category_orders={"Driver": df_goat['Driver'].unique().tolist()} 
+                category_orders={"Driver": df_goat['Driver'].unique().tolist()} # Order of appearance
             )
             fig_goat.update_traces(marker=dict(size=8, line=dict(width=1, color='DarkSlateGrey')))
             fig_goat.update_layout(
@@ -282,26 +308,30 @@ if df_raw is not None:
                 best_elo_df[['Driver', 'Elo', 'Year', 'Team']],
                 use_container_width=True,
                 column_config={
-                    # Échelle visuelle ajustée : de 1000 à 3000
-                    "Elo": st.column_config.ProgressColumn("Peak Elo", format="%d", min_value=1000, max_value=3000),
+                    "Elo": st.column_config.ProgressColumn("Peak Elo", format="%d", min_value=1500, max_value=2600),
                     "Year": st.column_config.NumberColumn("Year", format="%d")
                 }, 
                 height=400
             )
 
+    # --- VIEW 2 : BY SEASON ---
     elif nav_selection == "By Season":
         years_list = sorted(df_elo['Year'].unique(), reverse=True)
         col_sel, col_kpi = st.columns([1, 3])
         
         with col_sel:
+            # L'interaction ici rechargera le script, mais nav_selection restera sur "By Season"
             selected_year = st.selectbox("Season", years_list)
         
+        # Filter Data
         data_year = df_elo[df_elo['Year'] == selected_year].copy()
         
+        # Final Season Ranking
         last_date = data_year['Date'].max()
         final_rankings = data_year[data_year['Date'] == last_date].sort_values(by='Elo', ascending=False)
         champion = final_rankings.iloc[0]
         
+        # Gap analysis
         gap_df = calculate_teammate_gaps(final_rankings)
         champion_stats = gap_df[gap_df['Driver'] == champion['Driver']].iloc[0]
         
@@ -315,6 +345,7 @@ if df_raw is not None:
             sign = "+" if gap_val > 0 else ""
             c4.metric(f"Gap vs {champion_stats['Vs_Mate']}", f"{sign}{int(gap_val)} pts")
 
+        # Season Chart
         st.subheader(f"1. Season Progression {selected_year}")
         
         top_10_drivers = final_rankings.head(10)['Driver'].tolist()
@@ -332,6 +363,7 @@ if df_raw is not None:
         )
         st.plotly_chart(fig_season, use_container_width=True)
         
+        # Internal Domination Table
         st.subheader("2. Driver vs Teammate")
         st.dataframe(
             gap_df[['Driver', 'Team', 'Elo', 'Gap', 'Vs_Mate']].reset_index(drop=True),
