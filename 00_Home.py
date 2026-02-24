@@ -1,8 +1,5 @@
 import streamlit as st
 
-# Note: No set_page_config here, it is handled by main.py
-
-# --- CSS: TYPOGRAPHY & BADGES ---
 st.markdown("""
 <style>
     /* 1. Title Adjustment */
@@ -57,21 +54,15 @@ This portfolio gathers Python projects applied to market finance and other areas
 
 st.divider()
 
-# --- PROJECT GRID (2x2 Layout) ---
-
-# ROW 1
 col1, col2 = st.columns(2, gap="medium")
 
 # 1. FINANCE PROJECT
 with col1:
     with st.container(border=True):
-        # Title (Clickable)
         st.page_link("01_Portfolio_Optimizer.py", label="**Portfolio Optimizer**", use_container_width=True)
         
-        # Domain Badge (Pale Blue)
         st.markdown('<span class="badge finance">Market Finance</span>', unsafe_allow_html=True)
         
-        # Expanded Description
         st.markdown("""
         <div class="desc-text">
         Investment tool based on Modern Portfolio Theory. It visualizes the Efficient Frontier to identify the optimal asset allocation for a specific return target.
@@ -83,7 +74,6 @@ with col2:
     with st.container(border=True):
         st.page_link("pages/03_Movie_Recommendation_System.py", label="**Movie Recommendation System**", use_container_width=True)
         
-        # Domain Badge (Pale Purple)
         st.markdown('<span class="badge cinema">Cinema & NLP</span>', unsafe_allow_html=True)
         
         st.markdown("""
@@ -92,11 +82,9 @@ with col2:
         </div>
         """, unsafe_allow_html=True)
 
-# Spacer between rows
 st.write("") 
 st.write("")
 
-# ROW 2
 col3, col4 = st.columns(2, gap="medium")
 
 # 3. F1 PROJECT
@@ -104,7 +92,6 @@ with col3:
     with st.container(border=True):
         st.page_link("pages/04_F1_Elo_System.py", label="**F1 Elo Rating System**", use_container_width=True)
         
-        # Domain Badge (Pale Red)
         st.markdown('<span class="badge f1">Formula 1 Sports Analysis</span>', unsafe_allow_html=True)
         
         st.markdown("""
@@ -113,16 +100,13 @@ with col3:
         </div>
         """, unsafe_allow_html=True)
 
-# 4. BLACK SCHOLES PROJECT (NEW)
+# 4. BLACK SCHOLES PROJECT
 with col4:
     with st.container(border=True):
-        # Title (Clickable) - Pointing to pages/ folder
         st.page_link("pages/02_Equity_Valuation_Model.py", label="**Equity Valuation Model (CAPM)**", use_container_width=True)
         
-        # Domain Badge (CHANGED TO GREEN 'data')
         st.markdown('<span class="badge data">Market Finance</span>', unsafe_allow_html=True)
         
-        # Description
         st.markdown("""
         <div class="desc-text">
         Tool based on the Capital Asset Pricing Model (CAPM) to identify undervalued stocks using the Security Market Line.

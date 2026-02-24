@@ -3,69 +3,43 @@ import pandas as pd
 import numpy as np
 import datetime
 
-# Note: No set_page_config here as it is handled by main.py
-
-# ==============================================================================
-# 1. DATA LOADING & BACKEND FUNCTIONS
-# ==============================================================================
-
 @st.cache_data(ttl=3600, show_spinner=False)
 def get_market_data(tickers, years_back):
-    """
-    Downloads market data and the risk-free rate.
-    Cached for 1 hour to avoid spamming Yahoo Finance.
-    Lazy import of yfinance to prevent slowing down the app startup.
-    """
     import yfinance as yf
     
     end_date = datetime.date.today()
     start_date = end_date - datetime.timedelta(days=years_back*365)
 
-    # 1. Risk Free Rate (10 Year Treasury Note)
     try:
         tnx = yf.Ticker("^TNX").history(period="5d")
         rf_rate = tnx['Close'].iloc[-1] / 100 if not tnx.empty else 0.04
     except:
         rf_rate = 0.04
 
-    # 2. Asset Data
     try:
         data = yf.download(tickers, start=start_date, end=end_date, progress=False)['Close']
-        # Drop empty columns (failed downloads)
         data = data.dropna(axis=1, how='all')
         return rf_rate, data
     except Exception as e:
         return rf_rate, None
 
-# ==============================================================================
-# 2. SIDEBAR CONFIGURATION
-# ==============================================================================
 st.sidebar.header("Configuration")
 
-# A. Tickers
 default_tickers = "LVMUY, TSM, JPM, PBR"
 tickers_input = st.sidebar.text_input("Tickers (comma separated)", value=default_tickers)
 tickers_list = [x.strip().upper() for x in tickers_input.split(',') if x.strip()]
 
-# B. Target Return
 target_input = st.sidebar.number_input("Target Annual Return (%)", min_value=0.0, max_value=100.0, value=12.0, step=0.5)
 target_return = target_input / 100
 
-# C. Time Horizon
 years_back = st.sidebar.slider("Historical Data (Years)", min_value=1, max_value=10, value=5)
 
-# D. Simulation Settings
-n_simulations = 5000 # Slightly reduced for Free Tier responsiveness, sufficient for convergence
-
-# ==============================================================================
-# 3. MAIN LOGIC
-# ==============================================================================
+n_simulations = 5000 
 
 st.title("Portfolio Optimizer")
 st.markdown("Investment tool based on Modern Portfolio Theory. It visualizes the Efficient Frontier to identify the optimal asset allocation for a specific return target.")
 st.markdown("---")
 
-# --- DATA PREP ---
 if not tickers_list:
     st.warning("Please enter valid tickers.")
     st.stop()
@@ -77,50 +51,37 @@ with st.spinner('Processing market data...'):
         st.error("Error: At least 2 valid assets must be found on Yahoo Finance.")
         st.stop()
 
-    # Financial Calculations
     tickers = data.columns.tolist()
     returns = data.pct_change().dropna()
     mean_returns = returns.mean() * 252
     cov_matrix = returns.cov() * 252
     num_assets = len(tickers)
 
-    # Display RF Rate in sidebar
     st.sidebar.markdown("---")
     st.sidebar.metric("Risk-Free Rate (10Y US Bond)", f"{rf_rate:.2%}")
 
-    # --- MONTE CARLO ENGINE (Vectorized) ---
-    # Random weight generation
     weights = np.random.random((n_simulations, num_assets))
     weights /= np.sum(weights, axis=1)[:, np.newaxis]
 
-    # Portfolio metrics calculation (Matrix multiplication = Fast)
     sim_rets = np.dot(weights, mean_returns.values)
     sim_vols = np.sqrt(np.diag(np.dot(weights, np.dot(cov_matrix.values, weights.T))))
     sim_sharpes = (sim_rets - rf_rate) / sim_vols
 
-    # --- OPTIMIZATION ---
     max_idx = sim_sharpes.argmax()
     tan_ret = sim_rets[max_idx]
     tan_vol = sim_vols[max_idx]
     tan_sharpe = sim_sharpes[max_idx]
     tan_weights = weights[max_idx]
 
-    # --- ALLOCATION (CAL) ---
     if target_return < rf_rate:
         w_invest = 0.0
         client_vol = 0.0
     else:
-        # Required leverage or exposure ratio
         w_invest = (target_return - rf_rate) / (tan_ret - rf_rate) if (tan_ret - rf_rate) != 0 else 0
         client_vol = w_invest * tan_vol
     
     w_cash = 1.0 - w_invest
 
-    # ==============================================================================
-    # 4. RESULTS DISPLAY
-    # ==============================================================================
-
-    # --- SECTION 1: STRATEGIC REPORT ---
     st.subheader("1. Allocation Report")
     
     col1, col2, col3, col4 = st.columns(4)
@@ -131,14 +92,12 @@ with st.spinner('Processing market data...'):
 
     st.write("#### Equity Composition")
     
-    # Create Weights DataFrame
     df_final = pd.DataFrame({
         "Ticker": tickers,
         "Tangency Weight": tan_weights,
         "Final Portfolio Weight": tan_weights * w_invest
     }).sort_values(by="Final Portfolio Weight", ascending=False)
     
-    # Formatting for display (String %)
     df_display = df_final.copy()
     df_display["Tangency Weight"] = df_display["Tangency Weight"].apply(lambda x: f"{x:.1%}")
     df_display["Final Portfolio Weight"] = df_display["Final Portfolio Weight"].apply(lambda x: f"{x:.1%}")
@@ -147,17 +106,13 @@ with st.spinner('Processing market data...'):
 
     st.markdown("---")
 
-    # --- SECTION 2: EFFICIENT FRONTIER (PLOTLY) ---
-    # Lazy Import of Plotly only when needed
     import plotly.graph_objects as go
     import plotly.express as px
 
     st.subheader("2. Efficient Frontier & Capital Allocation")
 
-    # Create Figure
     fig = go.Figure()
 
-    # 1. The Cloud (Monte Carlo) - Scattergl for performance
     fig.add_trace(go.Scattergl(
         x=sim_vols, 
         y=sim_rets,
@@ -173,7 +128,6 @@ with st.spinner('Processing market data...'):
         name='Simulations'
     ))
 
-    # 2. Capital Allocation Line (CAL)
     max_stock_vol = np.max(np.sqrt(np.diag(cov_matrix)))
     max_x = max(tan_vol, client_vol, max_stock_vol) * 1.2
     
@@ -185,8 +139,6 @@ with st.spinner('Processing market data...'):
         name='Capital Allocation Line'
     ))
 
-    # 3. Specific Points (Risk Free, Tangency, Target)
-    # Risk Free
     fig.add_trace(go.Scatter(
         x=[0], y=[rf_rate],
         mode='markers+text',
@@ -195,7 +147,6 @@ with st.spinner('Processing market data...'):
         name='Risk Free'
     ))
 
-    # Tangency Portfolio
     fig.add_trace(go.Scatter(
         x=[tan_vol], y=[tan_ret],
         mode='markers+text',
@@ -204,7 +155,6 @@ with st.spinner('Processing market data...'):
         name='Tangency Portfolio'
     ))
 
-    # Target Portfolio
     fig.add_trace(go.Scatter(
         x=[client_vol], y=[target_return],
         mode='markers+text',
@@ -213,7 +163,6 @@ with st.spinner('Processing market data...'):
         name='Target Portfolio'
     ))
 
-    # 4. Individual Assets
     stock_vols_series = returns.std() * np.sqrt(252)
     fig.add_trace(go.Scatter(
         x=stock_vols_series,
@@ -224,7 +173,6 @@ with st.spinner('Processing market data...'):
         name='Assets'
     ))
 
-    # Layout Formatting
     fig.update_layout(
         xaxis_title="Annualized Volatility (Risk)",
         yaxis_title="Annualized Return",
@@ -239,7 +187,6 @@ with st.spinner('Processing market data...'):
 
     st.markdown("---")
 
-    # --- SECTION 3: METRICS & CORRELATION ---
     col_metrics, col_corr = st.columns([1, 1])
 
     with col_metrics:
@@ -248,7 +195,6 @@ with st.spinner('Processing market data...'):
             'Return': mean_returns,
             'Volatility': stock_vols_series
         })
-        # Formatting
         df_metrics_disp = df_metrics.copy()
         df_metrics_disp['Return'] = df_metrics_disp['Return'].apply(lambda x: f"{x:.1%}")
         df_metrics_disp['Volatility'] = df_metrics_disp['Volatility'].apply(lambda x: f"{x:.1%}")
@@ -256,11 +202,10 @@ with st.spinner('Processing market data...'):
 
     with col_corr:
         st.subheader("4. Correlation Matrix")
-        # Interactive Heatmap with Plotly Express
         fig_corr = px.imshow(
             returns.corr(),
             text_auto=".2f",
-            color_continuous_scale='RdBu_r', # Red Blue reverse (Red = neg, Blue = pos)
+            color_continuous_scale='RdBu_r', 
             zmin=-1, zmax=1,
             aspect="auto"
         )

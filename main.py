@@ -1,13 +1,11 @@
 import streamlit as st
 
-# --- 1. GLOBAL CONFIGURATION ---
 st.set_page_config(
     page_title="Julien Patron - Portfolio",
     layout="wide",
     initial_sidebar_state="expanded" 
 )
 
-# --- CSS FOR SIDEBAR NAME & STYLING ---
 st.markdown("""
 <style>
     /* Insert text above the navigation container */
@@ -27,27 +25,22 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- 2. PAGE DEFINITIONS ---
-
 home_page = st.Page(
     "00_Home.py", 
     title="Home", 
     default=True
 )
 
-# Finance Projects
 finance_page_1 = st.Page(
     "01_Portfolio_Optimizer.py", 
     title="Portfolio Optimizer"
 )
 
-# Dans main.py, modifie cette partie :
 finance_page_2 = st.Page(
-    "pages/02_Equity_Valuation_Model.py",  # Ajout de "pages/" devant
+    "pages/02_Equity_Valuation_Model.py",
     title="Equity Valuation Model (CAPM)"
 )
 
-# Other Projects
 movie_page = st.Page(
     "pages/03_Movie_Recommendation_System.py", 
     title="Movie Recommendation System"
@@ -58,14 +51,12 @@ f1_page = st.Page(
     title="F1 Elo Rating System"
 )
 
-# --- 3. NAVIGATION SETUP ---
 pg = st.navigation(
     {
         " ": [home_page],
-        "Finance": [finance_page_1, finance_page_2], # Ajout ici
+        "Finance": [finance_page_1, finance_page_2],
         "Other": [movie_page, f1_page] 
     }
 )
 
-# --- 4. EXECUTION ---
 pg.run()
