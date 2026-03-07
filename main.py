@@ -24,6 +24,9 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+if st.query_params.get("admin") == "true":
+    st.session_state["admin_mode"] = True
+
 home_page = st.Page("00_Home.py", title="Home", default=True)
 finance_page_1 = st.Page("01_Portfolio_Optimizer.py", title="Portfolio Optimizer")
 finance_page_2 = st.Page("pages/02_Equity_Valuation_Model.py", title="Equity Valuation Model (CAPM)")
@@ -36,8 +39,8 @@ nav_dict = {
     "Other": [movie_page, f1_page] 
 }
 
-if st.query_params.get("admin") == "true":
-    nav_dict["Private"] = [st.Page("pages/99_Watchlist.py", title="Watchlist")]
+if st.session_state.get("admin_mode", False):
+    nav_dict["Private"] = [st.Page("pages/99_Watchlist.py", title="Watchlist", url_path="watchlist")]
 
 pg = st.navigation(nav_dict)
 pg.run()
