@@ -8,7 +8,6 @@ st.set_page_config(
 
 st.markdown("""
 <style>
-    /* Insert text above the navigation container */
     [data-testid="stSidebarNav"]::before {
         content: "Julien Patron";
         display: block;
@@ -25,38 +24,20 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-home_page = st.Page(
-    "00_Home.py", 
-    title="Home", 
-    default=True
-)
+home_page = st.Page("00_Home.py", title="Home", default=True)
+finance_page_1 = st.Page("01_Portfolio_Optimizer.py", title="Portfolio Optimizer")
+finance_page_2 = st.Page("pages/02_Equity_Valuation_Model.py", title="Equity Valuation Model (CAPM)")
+movie_page = st.Page("pages/03_Movie_Recommendation_System.py", title="Movie Recommendation System")
+f1_page = st.Page("pages/04_F1_Elo_System.py", title="F1 Elo Rating System")
 
-finance_page_1 = st.Page(
-    "01_Portfolio_Optimizer.py", 
-    title="Portfolio Optimizer"
-)
+nav_dict = {
+    " ": [home_page],
+    "Finance": [finance_page_1, finance_page_2],
+    "Other": [movie_page, f1_page] 
+}
 
-finance_page_2 = st.Page(
-    "pages/02_Equity_Valuation_Model.py",
-    title="Equity Valuation Model (CAPM)"
-)
+if st.query_params.get("admin") == "true":
+    nav_dict["Private"] = [st.Page("pages/99_Watchlist.py", title="Watchlist")]
 
-movie_page = st.Page(
-    "pages/03_Movie_Recommendation_System.py", 
-    title="Movie Recommendation System"
-)
-
-f1_page = st.Page(
-    "pages/04_F1_Elo_System.py", 
-    title="F1 Elo Rating System"
-)
-
-pg = st.navigation(
-    {
-        " ": [home_page],
-        "Finance": [finance_page_1, finance_page_2],
-        "Other": [movie_page, f1_page] 
-    }
-)
-
+pg = st.navigation(nav_dict)
 pg.run()
