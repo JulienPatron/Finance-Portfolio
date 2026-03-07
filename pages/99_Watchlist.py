@@ -61,10 +61,6 @@ st.markdown("""
         object-fit: cover;
         flex-shrink: 0;
     }
-    .search-result-row {
-        padding: 5px 0;
-        border-bottom: 1px solid #eee;
-    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -128,50 +124,50 @@ def get_movie_details(tmdb_id):
 
 st.title("Ma Watchlist")
 
-if "search_input" not in st.session_state:
-    st.session_state.search_input = ""
+search_query = st.text_input("Titre du film :", placeholder="Rechercher un film...")
 
-st.text_input("Rechercher un film :", placeholder="Tapez le titre et appuyez sur Entrée...", key="search_input")
-
-if st.session_state.search_input:
-    results = search_movies(st.session_state.search_input)
+if search_query:
+    results = search_movies(search_query)
     if results:
-        st.markdown("<div style='margin-bottom:10px; font-size:14px; color:#666;'>Résultats :</div>", unsafe_allow_html=True)
+        options_list = [None] + results
         
-        for m in results[:10]:  
-            tmdb_id = m['id']
+        def format_result(m):
+            if m is None:
+                return "-- Sélectionner un film --"
+            
             titre = m.get('title', 'Titre inconnu')
             annee = m.get('release_date', '????')[:4]
             vo = m.get('original_title', '')
             votes = m.get('vote_count', 0) 
             
-            label = f"**{titre}** ({annee})"
-            if vo and vo != titre:
-                label += f" *[VO : {vo}]*"
-            label += f" &nbsp;&nbsp;•&nbsp;&nbsp; {votes} avis"
+            label = f"{titre} ({annee})"
             
-            col1, col2 = st.columns([5, 1])
-            with col1:
-                st.markdown(f"<div class='search-result-row'>{label}</div>", unsafe_allow_html=True)
-            with col2:
-                if st.button("Ajouter", key=f"add_{tmdb_id}", use_container_width=True):
-                    records = sheet.get_all_records()
-                    if any(str(r.get('tmdb_id', '')) == str(tmdb_id) for r in records):
-                        st.warning("Ce film est déjà dans la Watchlist.")
-                    else:
-                        details = get_movie_details(tmdb_id)
-                        row_to_insert = [
-                            details["tmdb_id"], details["titre"], details["annee"], 
-                            details["duree"], details["genres"], details["note"], 
-                            details["poster_url"], details["streaming"], details["date_ajout"]
-                        ]
-                        sheet.append_row(row_to_insert)
-                        st.session_state.search_input = ""
-                        st.rerun()
-        st.divider()
-    else:
-        st.info("Aucun film trouvé avec ce titre.")
-        st.divider()
+            if vo and vo != titre:
+                label += f" [VO : {vo}]"
+            
+            label += f" ({votes} avis)"
+            
+            return label
+
+        selected_movie = st.selectbox("Résultats :", options_list, format_func=format_result)
+        
+        if selected_movie is not None:
+            tmdb_id = selected_movie['id']
+            records = sheet.get_all_records()
+            
+            if any(str(r.get('tmdb_id', '')) == str(tmdb_id) for r in records):
+                st.warning("Ce film est déjà dans la Watchlist.")
+            else:
+                details = get_movie_details(tmdb_id)
+                row_to_insert = [
+                    details["tmdb_id"], details["titre"], details["annee"], 
+                    details["duree"], details["genres"], details["note"], 
+                    details["poster_url"], details["streaming"], details["date_ajout"]
+                ]
+                sheet.append_row(row_to_insert)
+                st.rerun()
+
+st.divider()
 
 records = sheet.get_all_records()
 
