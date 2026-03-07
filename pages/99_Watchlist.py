@@ -10,15 +10,6 @@ st.set_page_config(page_title="My Watchlist", layout="wide")
 st.markdown("""
 <style>
     .block-container {padding-top: 2rem;}
-    .movie-card {
-        border: 1px solid #ddd;
-        border-radius: 10px;
-        padding: 10px;
-        margin-bottom: 20px;
-        height: 100%;
-        display: flex;
-        flex-direction: column;
-    }
     .movie-poster {
         width: 100%;
         aspect-ratio: 2 / 3;
@@ -26,12 +17,12 @@ st.markdown("""
         border-radius: 5px;
         margin-bottom: 10px;
     }
-    .provider-logo { width: 30px; margin: 0 4px; border-radius: 5px; }
     .movie-title { 
         font-weight: bold; 
         font-size: 16px; 
+        line-height: 1.2em;
+        height: 2.4em;
         margin-bottom: 5px; 
-        min-height: 48px;
         display: -webkit-box;
         -webkit-line-clamp: 2;
         -webkit-box-orient: vertical;
@@ -40,12 +31,26 @@ st.markdown("""
     .movie-meta { 
         font-size: 13px; 
         color: #555; 
+        line-height: 1.4em;
+        height: 2.8em;
         margin-bottom: 10px;
-        min-height: 40px;
+        overflow: hidden;
     }
     .streaming-container {
-        min-height: 35px;
-        margin-bottom: 10px;
+        height: 30px;
+        margin-bottom: 5px;
+        display: flex;
+        flex-wrap: nowrap;
+        overflow: hidden;
+        align-items: center;
+    }
+    .provider-logo { 
+        height: 30px; 
+        width: 30px; 
+        margin-right: 5px; 
+        border-radius: 5px; 
+        object-fit: cover;
+        flex-shrink: 0;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -152,29 +157,31 @@ else:
         col = cols[i % 4]
         
         with col:
-            try:
-                raw_note = float(row["note"])
-                note_ui = round(raw_note / 10, 1) if raw_note > 10 else round(raw_note, 1)
-            except:
-                note_ui = row["note"]
+            with st.container(border=True):
+                try:
+                    raw_note = float(row["note"])
+                    note_ui = round(raw_note / 10, 1) if raw_note > 10 else round(raw_note, 1)
+                except:
+                    note_ui = row["note"]
 
-            st.markdown('<div class="movie-card">', unsafe_allow_html=True)
-            st.markdown(f'<img src="{row["poster_url"]}" class="movie-poster">', unsafe_allow_html=True)
-            st.markdown(f'<div class="movie-title">{row["titre"]} ({row["annee"]})</div>', unsafe_allow_html=True)
-            st.markdown(f'<div class="movie-meta">{note_ui}/10 | {row["duree"]}<br>{row["genres"]}</div>', unsafe_allow_html=True)
-            
-            try:
-                logos = ast.literal_eval(row['streaming'])
-                if logos:
-                    logos_html = "".join([f'<img src="{logo}" class="provider-logo">' for logo in logos])
-                    st.markdown(f'<div class="streaming-container">{logos_html}</div>', unsafe_allow_html=True)
-                else:
-                    st.markdown('<div class="streaming-container" style="color:#aaa; font-size:12px;">Aucun stream gratuit</div>', unsafe_allow_html=True)
-            except:
-                st.markdown('<div class="streaming-container" style="color:#aaa; font-size:12px;">Aucun stream gratuit</div>', unsafe_allow_html=True)
+                try:
+                    logos = ast.literal_eval(row['streaming'])
+                    if logos:
+                        logos_html = "".join([f'<img src="{logo}" class="provider-logo">' for logo in logos])
+                    else:
+                        logos_html = '<div style="color:#aaa; font-size:12px;">Aucun stream gratuit</div>'
+                except:
+                    logos_html = '<div style="color:#aaa; font-size:12px;">Aucun stream gratuit</div>'
 
-            if st.button("Marqué comme vu", key=f"del_{row['tmdb_id']}", use_container_width=True):
-                sheet.delete_rows(int(row['sheet_row']))
-                st.rerun()
+                card_html = f"""
+                <img src="{row['poster_url']}" class="movie-poster">
+                <div class="movie-title">{row['titre']} ({row['annee']})</div>
+                <div class="movie-meta">{note_ui}/10 | {row['duree']}<br>{row['genres']}</div>
+                <div class="streaming-container">{logos_html}</div>
+                """
                 
-            st.markdown('</div>', unsafe_allow_html=True)
+                st.markdown(card_html, unsafe_allow_html=True)
+
+                if st.button("Marqué comme vu", key=f"del_{row['tmdb_id']}", use_container_width=True):
+                    sheet.delete_rows(int(row['sheet_row']))
+                    st.rerun()
