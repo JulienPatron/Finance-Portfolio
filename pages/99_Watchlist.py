@@ -4,6 +4,7 @@ import requests
 import gspread
 import datetime
 import ast
+import time
 
 st.set_page_config(page_title="Ma Watchlist", layout="wide")
 
@@ -205,8 +206,6 @@ else:
                 if st.button("Marqué comme vu", key=f"del_{row['tmdb_id']}", use_container_width=True):
                     sheet.delete_rows(int(row['sheet_row']))
                     st.rerun()
-
-import time
 
 st.divider()
 
