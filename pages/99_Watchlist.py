@@ -10,6 +10,15 @@ st.set_page_config(page_title="My Watchlist", layout="wide")
 st.markdown("""
 <style>
     .block-container {padding-top: 2rem;}
+    .movie-card {
+        border: 1px solid #ddd;
+        border-radius: 10px;
+        padding: 10px;
+        margin-bottom: 20px;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
     .movie-poster {
         width: 100%;
         aspect-ratio: 2 / 3;
@@ -68,6 +77,7 @@ def get_google_sheet():
 sheet = get_google_sheet()
 
 TMDB_API_KEY = st.secrets["TMDB_API_KEY"]
+OMDB_API_KEY = st.secrets["OMDB_API_KEY"]
 
 def search_movies(query):
     url = f"https://api.themoviedb.org/3/search/movie?api_key={TMDB_API_KEY}&query={query}&language=fr-FR&page=1"
@@ -85,13 +95,28 @@ def get_movie_details(tmdb_id):
     
     streaming_logos = [f"https://image.tmdb.org/t/p/original{p['logo_path']}" for p in plateformes]
     
+    imdb_id = data.get('imdb_id')
+    note_finale = "N/A"
+    
+    if imdb_id:
+        omdb_url = f"http://www.omdbapi.com/?i={imdb_id}&apikey={OMDB_API_KEY}"
+        try:
+            omdb_data = requests.get(omdb_url).json()
+            note_finale = omdb_data.get('imdbRating', "N/A")
+        except:
+            pass
+            
+    if note_finale == "N/A":
+        raw_tmdb = data.get('vote_average', 0)
+        note_finale = str(round(raw_tmdb, 1)) if raw_tmdb > 0 else "N/A"
+    
     return {
         "tmdb_id": tmdb_id,
         "titre": data.get('title'),
         "annee": data.get('release_date', '????')[:4],
         "duree": f"{data.get('runtime', 0)//60}h {data.get('runtime', 0)%60:02d}m",
         "genres": ", ".join([g['name'] for g in data.get('genres', [])][:3]),
-        "note": int(data.get('vote_average', 0) * 10),
+        "note": note_finale,
         "poster_url": f"https://image.tmdb.org/t/p/w500{data.get('poster_path')}" if data.get('poster_path') else "https://via.placeholder.com/300x450?text=No+Image",
         "streaming": str(streaming_logos),
         "date_ajout": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -123,7 +148,6 @@ if search_query:
                     details["poster_url"], details["streaming"], details["date_ajout"]
                 ]
                 sheet.append_row(row_to_insert)
-                st.success(f"{details['titre']} ajouté avec succès.")
                 st.rerun()
 
 st.divider()
@@ -138,14 +162,14 @@ else:
 
     sort_option = st.selectbox(
         "Trier par :", 
-        ["Date d'ajout (Plus récents d'abord)", "Note TMDB (Décroissant)", "Année de sortie (Récent d'abord)", "Ordre alphabétique"]
+        ["Date d'ajout (Plus récents d'abord)", "Note (Décroissant)", "Année de sortie (Récent d'abord)", "Ordre alphabétique"]
     )
     
     if sort_option == "Date d'ajout (Plus récents d'abord)":
         df = df.sort_values(by='date_ajout', ascending=False)
-    elif sort_option == "Note TMDB (Décroissant)":
-        df['note'] = pd.to_numeric(df['note'], errors='coerce')
-        df = df.sort_values(by='note', ascending=False)
+    elif sort_option == "Note (Décroissant)":
+        df['note_num'] = pd.to_numeric(df['note'], errors='coerce')
+        df = df.sort_values(by='note_num', ascending=False)
     elif sort_option == "Année de sortie (Récent d'abord)":
         df = df.sort_values(by='annee', ascending=False)
     elif sort_option == "Ordre alphabétique":
@@ -158,11 +182,7 @@ else:
         
         with col:
             with st.container(border=True):
-                try:
-                    raw_note = float(row["note"])
-                    note_ui = round(raw_note / 10, 1) if raw_note > 10 else round(raw_note, 1)
-                except:
-                    note_ui = row["note"]
+                note_ui = row["note"]
 
                 try:
                     logos = ast.literal_eval(row['streaming'])
