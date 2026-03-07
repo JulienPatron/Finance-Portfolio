@@ -129,13 +129,30 @@ search_query = st.text_input("Titre du film :", placeholder="Rechercher un film.
 if search_query:
     results = search_movies(search_query)
     if results:
-        options = {f"{m['title']} ({m.get('release_date', '????')[:4]})": m['id'] for m in results}
-        options_list = ["-- Sélectionner un film --"] + list(options.keys())
+        options_list = [None] + results
         
-        selected_movie = st.selectbox("Résultats :", options_list)
+        def format_result(m):
+            if m is None:
+                return "-- Sélectionner un film --"
+            
+            titre = m.get('title', 'Titre inconnu')
+            annee = m.get('release_date', '????')[:4]
+            vo = m.get('original_title', '')
+            votes = m.get('vote_count', 0) 
+            
+            label = f"{titre} ({annee})"
+            
+            if vo and vo != titre:
+                label += f" [VO : {vo}]"
+            
+            label += f" ({votes} avis)"
+            
+            return label
+
+        selected_movie = st.selectbox("Résultats :", options_list, format_func=format_result)
         
-        if selected_movie != "-- Sélectionner un film --":
-            tmdb_id = options[selected_movie]
+        if selected_movie is not None:
+            tmdb_id = selected_movie['id']
             records = sheet.get_all_records()
             
             if any(str(r.get('tmdb_id', '')) == str(tmdb_id) for r in records):
