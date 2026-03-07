@@ -20,8 +20,26 @@ st.markdown("""
         flex-direction: column;
     }
     .provider-logo { width: 30px; margin: 0 4px; border-radius: 5px; }
-    .movie-title { font-weight: bold; font-size: 16px; margin-bottom: 5px; }
-    .movie-meta { font-size: 13px; color: #555; margin-bottom: 10px;}
+    .movie-title { 
+        font-weight: bold; 
+        font-size: 16px; 
+        margin-bottom: 5px; 
+        min-height: 48px;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+    .movie-meta { 
+        font-size: 13px; 
+        color: #555; 
+        margin-bottom: 10px;
+        min-height: 40px;
+    }
+    .streaming-container {
+        min-height: 35px;
+        margin-bottom: 10px;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -61,7 +79,7 @@ def get_movie_details(tmdb_id):
         "annee": data.get('release_date', '????')[:4],
         "duree": f"{data.get('runtime', 0)//60}h {data.get('runtime', 0)%60:02d}m",
         "genres": ", ".join([g['name'] for g in data.get('genres', [])][:3]),
-        "note": round(data.get('vote_average', 0), 1),
+        "note": int(data.get('vote_average', 0) * 10),
         "poster_url": f"https://image.tmdb.org/t/p/w500{data.get('poster_path')}" if data.get('poster_path') else "https://via.placeholder.com/300x450?text=No+Image",
         "streaming": str(streaming_logos),
         "date_ajout": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -121,26 +139,32 @@ else:
     elif sort_option == "Ordre alphabétique":
         df = df.sort_values(by='titre', ascending=True)
 
-    cols = st.columns(5)
+    cols = st.columns(4)
     
     for i, (_, row) in enumerate(df.iterrows()):
-        col = cols[i % 5]
+        col = cols[i % 4]
         
         with col:
+            try:
+                raw_note = float(row["note"])
+                note_ui = round(raw_note / 10, 1) if raw_note > 10 else round(raw_note, 1)
+            except:
+                note_ui = row["note"]
+
             st.markdown('<div class="movie-card">', unsafe_allow_html=True)
             st.image(row['poster_url'], use_container_width=True)
             st.markdown(f'<div class="movie-title">{row["titre"]} ({row["annee"]})</div>', unsafe_allow_html=True)
-            st.markdown(f'<div class="movie-meta">{row["note"]}/10 | {row["duree"]}<br>{row["genres"]}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="movie-meta">{note_ui}/10 | {row["duree"]}<br>{row["genres"]}</div>', unsafe_allow_html=True)
             
             try:
                 logos = ast.literal_eval(row['streaming'])
                 if logos:
                     logos_html = "".join([f'<img src="{logo}" class="provider-logo">' for logo in logos])
-                    st.markdown(f'<div>{logos_html}</div><br>', unsafe_allow_html=True)
+                    st.markdown(f'<div class="streaming-container">{logos_html}</div>', unsafe_allow_html=True)
                 else:
-                    st.markdown('<div style="color:#aaa; font-size:12px; margin-bottom:15px;">Aucun stream gratuit</div>', unsafe_allow_html=True)
+                    st.markdown('<div class="streaming-container" style="color:#aaa; font-size:12px;">Aucun stream gratuit</div>', unsafe_allow_html=True)
             except:
-                pass
+                st.markdown('<div class="streaming-container" style="color:#aaa; font-size:12px;">Aucun stream gratuit</div>', unsafe_allow_html=True)
 
             if st.button("Marqué comme vu", key=f"del_{row['tmdb_id']}", use_container_width=True):
                 sheet.delete_rows(int(row['sheet_row']))
