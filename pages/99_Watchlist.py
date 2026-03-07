@@ -1,0 +1,167 @@
+import streamlit as st
+import pandas as pd
+import requests
+import gspread
+import datetime
+import ast
+
+st.set_page_config(page_title="My Watchlist", layout="wide")
+
+st.markdown("""
+<style>
+    .block-container {padding-top: 2rem;}
+    .movie-card {
+        border: 1px solid #ddd;
+        border-radius: 10px;
+        padding: 10px;
+        margin-bottom: 20px;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+    .provider-logo { width: 30px; margin: 0 4px; border-radius: 5px; }
+    .movie-title { font-weight: bold; font-size: 16px; margin-bottom: 5px; }
+    .movie-meta { font-size: 13px; color: #555; margin-bottom: 10px;}
+</style>
+""", unsafe_allow_html=True)
+
+# ==============================================================================
+# 1. CONNEXION GOOGLE SHEETS
+# ==============================================================================
+@st.cache_resource(show_spinner=False)
+def get_google_sheet():
+    try:
+        gc = gspread.service_account_from_dict(st.secrets["gcp_service_account"])
+        sh = gc.open("Streamlit_Watchlist").sheet1
+        return sh
+    except Exception as e:
+        st.error(f"Erreur de connexion Google Sheets : {e}")
+        st.stop()
+
+sheet = get_google_sheet()
+
+# ==============================================================================
+# 2. FONCTIONS TMDB
+# ==============================================================================
+TMDB_API_KEY = st.secrets["TMDB_API_KEY"]
+
+def search_movies(query):
+    url = f"https://api.themoviedb.org/3/search/movie?api_key={TMDB_API_KEY}&query={query}&language=fr-FR&page=1"
+    response = requests.get(url).json()
+    return response.get('results', [])[:10]
+
+def get_movie_details(tmdb_id):
+    url = f"https://api.themoviedb.org/3/movie/{tmdb_id}?api_key={TMDB_API_KEY}&language=fr-FR&append_to_response=watch/providers"
+    data = requests.get(url).json()
+    
+    # Filtrage des plateformes gratuites / abonnements (FR)
+    providers_data = data.get('watch/providers', {}).get('results', {}).get('FR', {})
+    flatrate = providers_data.get('flatrate', [])
+    free = providers_data.get('free', [])
+    plateformes = flatrate + free
+    
+    streaming_logos = [f"https://image.tmdb.org/t/p/original{p['logo_path']}" for p in plateformes]
+    
+    return {
+        "tmdb_id": tmdb_id,
+        "titre": data.get('title'),
+        "annee": data.get('release_date', '????')[:4],
+        "duree": f"{data.get('runtime', 0)//60}h {data.get('runtime', 0)%60:02d}m",
+        "genres": ", ".join([g['name'] for g in data.get('genres', [])][:3]),
+        "note": round(data.get('vote_average', 0), 1),
+        "poster_url": f"https://image.tmdb.org/t/p/w500{data.get('poster_path')}" if data.get('poster_path') else "https://via.placeholder.com/300x450?text=No+Image",
+        "streaming": str(streaming_logos), # On convertit la liste en string pour Google Sheets
+        "date_ajout": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    }
+
+# ==============================================================================
+# 3. INTERFACE : AJOUTER UN FILM
+# ==============================================================================
+st.title("🎬 Ma Watchlist Secrète")
+
+with st.expander("➕ Ajouter un nouveau film", expanded=False):
+    search_query = st.text_input("Titre du film :", placeholder="Ex: Dune, Oppenheimer...")
+    
+    if search_query:
+        results = search_movies(search_query)
+        if results:
+            options = {f"{m['title']} ({m.get('release_date', '????')[:4]})": m['id'] for m in results}
+            selected_movie = st.selectbox("Résultats :", list(options.keys()))
+            
+            if st.button("Ajouter à la liste", type="primary"):
+                tmdb_id = options[selected_movie]
+                
+                # Vérifier s'il n'est pas déjà dans la liste
+                records = sheet.get_all_records()
+                if any(str(r.get('tmdb_id', '')) == str(tmdb_id) for r in records):
+                    st.warning("Ce film est déjà dans ta Watchlist !")
+                else:
+                    details = get_movie_details(tmdb_id)
+                    row_to_insert = [
+                        details["tmdb_id"], details["titre"], details["annee"], 
+                        details["duree"], details["genres"], details["note"], 
+                        details["poster_url"], details["streaming"], details["date_ajout"]
+                    ]
+                    sheet.append_row(row_to_insert)
+                    st.success(f"✅ {details['titre']} ajouté avec succès !")
+                    st.rerun()
+
+st.divider()
+
+# ==============================================================================
+# 4. INTERFACE : AFFICHER LA WATCHLIST
+# ==============================================================================
+records = sheet.get_all_records()
+
+if not records:
+    st.info("Ta Watchlist est vide. Cherche un film pour commencer !")
+else:
+    df = pd.DataFrame(records)
+    # Astuce vitale : On garde le numéro de la ligne Google Sheet pour pouvoir supprimer le bon film plus tard
+    df['sheet_row'] = df.index + 2 
+
+    # --- TRI ---
+    sort_option = st.selectbox(
+        "Trier par :", 
+        ["Date d'ajout (Plus récents d'abord)", "Note TMDB (Décroissant)", "Année de sortie (Récent d'abord)", "Ordre alphabétique"]
+    )
+    
+    if sort_option == "Date d'ajout (Plus récents d'abord)":
+        df = df.sort_values(by='date_ajout', ascending=False)
+    elif sort_option == "Note TMDB (Décroissant)":
+        df['note'] = pd.to_numeric(df['note'], errors='coerce')
+        df = df.sort_values(by='note', ascending=False)
+    elif sort_option == "Année de sortie (Récent d'abord)":
+        df = df.sort_values(by='annee', ascending=False)
+    elif sort_option == "Ordre alphabétique":
+        df = df.sort_values(by='titre', ascending=True)
+
+    # --- AFFICHAGE EN GRILLE ---
+    cols = st.columns(5)
+    
+    for i, (_, row) in enumerate(df.iterrows()):
+        col = cols[i % 5]
+        
+        with col:
+            st.markdown('<div class="movie-card">', unsafe_allow_html=True)
+            st.image(row['poster_url'], use_container_width=True)
+            st.markdown(f'<div class="movie-title">{row["titre"]} ({row["annee"]})</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="movie-meta">⭐ {row["note"]}/10 | ⏳ {row["duree"]}<br>🎭 {row["genres"]}</div>', unsafe_allow_html=True)
+            
+            # Affichage des logos de streaming
+            try:
+                logos = ast.literal_eval(row['streaming']) # Reconvertit le string de GSheets en liste Python
+                if logos:
+                    logos_html = "".join([f'<img src="{logo}" class="provider-logo">' for logo in logos])
+                    st.markdown(f'<div>{logos_html}</div><br>', unsafe_allow_html=True)
+                else:
+                    st.markdown('<div style="color:#aaa; font-size:12px; margin-bottom:15px;">Aucun stream gratuit</div>', unsafe_allow_html=True)
+            except:
+                pass
+
+            # Bouton de suppression
+            if st.button("👁️ Marqué comme vu", key=f"del_{row['tmdb_id']}", use_container_width=True):
+                sheet.delete_rows(int(row['sheet_row']))
+                st.rerun()
+                
+            st.markdown('</div>', unsafe_allow_html=True)
