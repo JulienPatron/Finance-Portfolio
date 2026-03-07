@@ -125,6 +125,75 @@ def get_movie_details(tmdb_id):
 
 st.title("Ma Watchlist")
 
+# ====================================================================
+# OUTIL D'IMPORTATION MASSIF (PLACÉ TOUT EN HAUT)
+# ====================================================================
+with st.expander("Outil d'importation (temporaire)", expanded=True):
+    st.write("Vérifie bien que ton Google Sheet est vide (sauf la ligne 1) avant de lancer l'import.")
+    if st.button("Importer les 107 films d'un coup", type="primary"):
+        films_a_ajouter = [
+            "12 Years a Slave", "120 battements par minute", "1917", "2001 : l'odyssée de l'espace",
+            "Aftersun", "Akira", "Anatomie d'une chute", "Anora", "Apocalypse Now", "Argo",
+            "Arnaque américaine", "Au revoir là-haut", "Aviator", "Bac Nord", "Bagdad Café",
+            "Barry Lyndon", "Before Sunrise", "Boîte noire", "CODA", "District 9", "Dunkerque",
+            "Délire Express", "Démineurs", "El Camino : Un film Breaking Bad", "Enemy",
+            "Enron: The Smartest Guys in the Room", "Fargo", "First Man - le premier homme sur la Lune",
+            "Get Out", "Gone Girl", "Hamnet", "Heat", "Il faut sauver le soldat Ryan", "Incendies",
+            "L'Armée des ombres", "L'Innocence", "L'Étrange Histoire de Benjamin Button", "La Chasse",
+            "La Cité de la Peur : une comédie familiale", "La Folle Histoire de l'espace", "La Haine",
+            "La Ligne verte", "La Liste de Schindler", "La Tête haute", "La Zone d'intérêt",
+            "Le Cercle des poètes disparus", "Le Fabuleux destin d'Amélie Poulain", "Le Garçon au pyjama rayé",
+            "Le Pianiste", "Le Talentueux Mr Ripley", "Le garçon qui dompta le vent", "Le pont des espions",
+            "Le secret de Brokeback Mountain", "Les Enfants du temps", "Les Fils de l'homme", "Limitless",
+            "Lion", "Lost in Translation", "Mademoiselle", "Marty Supreme", "McFarland, USA", "Memento",
+            "Memories of murder", "Midsommar", "Moonlight", "Mystic River", "Mémoires de nos pères",
+            "Night Call", "No Country for Old Men", "Old Boy", "Onoda, 10 000 nuits dans la jungle",
+            "Paprika", "Past Lives - Nos vies d'avant", "Portrait de la jeune fille en feu", "Primer",
+            "Prisoners", "Pusher", "Requiem pour un massacre", "Schumacher", "Senna", "Shutter Island",
+            "Spies of Terror", "Split", "Taxi Driver", "The Apprentice", "The Artist", "The Brutalist",
+            "The Constant Gardener", "The Father", "The Gentlemen", "The Irishman", "The Nice Guys",
+            "The Outsider", "The Power of the Dog", "The Revenant", "The Spectacular Now", "There Will Be Blood",
+            "Thunderbolts*", "Top secret !", "Un homme d'exception", "Un parfait inconnu",
+            "Une bataille après l'autre", "Vice-Versa", "Voyage au bout de l'enfer", "Warrior",
+            "When Life Gives You Tangerines", "Wicked", "Yi Yi", "À vif !"
+        ]
+        
+        progress_bar = st.progress(0)
+        status_text = st.empty()
+        
+        records = sheet.get_all_records()
+        existing_ids = [str(r.get('tmdb_id', '')) for r in records]
+        lignes_a_inserer = []
+        
+        for i, titre in enumerate(films_a_ajouter):
+            status_text.text(f"Traitement de : {titre} ({i+1}/{len(films_a_ajouter)})")
+            
+            results = search_movies(titre)
+            if results:
+                tmdb_id = results[0]['id']
+                
+                if str(tmdb_id) not in existing_ids:
+                    details = get_movie_details(tmdb_id)
+                    lignes_a_inserer.append([
+                        details["tmdb_id"], details["titre"], details["annee"], 
+                        details["duree"], details["genres"], details["note"], 
+                        details["poster_url"], details["streaming"], details["date_ajout"]
+                    ])
+                    existing_ids.append(str(tmdb_id))
+            
+            progress_bar.progress((i + 1) / len(films_a_ajouter))
+            time.sleep(0.3) 
+            
+        if lignes_a_inserer:
+            status_text.text("Envoi vers Google Sheets...")
+            sheet.append_rows(lignes_a_inserer)
+            st.success("Importation terminée.")
+            time.sleep(2)
+            st.rerun()
+        else:
+            st.info("Tous les films sont déjà dans la liste.")
+# ====================================================================
+
 search_query = st.text_input("Titre du film :", placeholder="Rechercher un film...")
 
 if search_query:
@@ -206,68 +275,3 @@ else:
                 if st.button("Marqué comme vu", key=f"del_{row['tmdb_id']}", use_container_width=True):
                     sheet.delete_rows(int(row['sheet_row']))
                     st.rerun()
-
-st.divider()
-
-if st.button("Importer les 107 films d'un coup"):
-    films_a_ajouter = [
-        "12 Years a Slave", "120 battements par minute", "1917", "2001 : l'odyssée de l'espace",
-        "Aftersun", "Akira", "Anatomie d'une chute", "Anora", "Apocalypse Now", "Argo",
-        "Arnaque américaine", "Au revoir là-haut", "Aviator", "Bac Nord", "Bagdad Café",
-        "Barry Lyndon", "Before Sunrise", "Boîte noire", "CODA", "District 9", "Dunkerque",
-        "Délire Express", "Démineurs", "El Camino : Un film Breaking Bad", "Enemy",
-        "Enron: The Smartest Guys in the Room", "Fargo", "First Man - le premier homme sur la Lune",
-        "Get Out", "Gone Girl", "Hamnet", "Heat", "Il faut sauver le soldat Ryan", "Incendies",
-        "L'Armée des ombres", "L'Innocence", "L'Étrange Histoire de Benjamin Button", "La Chasse",
-        "La Cité de la Peur : une comédie familiale", "La Folle Histoire de l'espace", "La Haine",
-        "La Ligne verte", "La Liste de Schindler", "La Tête haute", "La Zone d'intérêt",
-        "Le Cercle des poètes disparus", "Le Fabuleux destin d'Amélie Poulain", "Le Garçon au pyjama rayé",
-        "Le Pianiste", "Le Talentueux Mr Ripley", "Le garçon qui dompta le vent", "Le pont des espions",
-        "Le secret de Brokeback Mountain", "Les Enfants du temps", "Les Fils de l'homme", "Limitless",
-        "Lion", "Lost in Translation", "Mademoiselle", "Marty Supreme", "McFarland, USA", "Memento",
-        "Memories of murder", "Midsommar", "Moonlight", "Mystic River", "Mémoires de nos pères",
-        "Night Call", "No Country for Old Men", "Old Boy", "Onoda, 10 000 nuits dans la jungle",
-        "Paprika", "Past Lives - Nos vies d'avant", "Portrait de la jeune fille en feu", "Primer",
-        "Prisoners", "Pusher", "Requiem pour un massacre", "Schumacher", "Senna", "Shutter Island",
-        "Spies of Terror", "Split", "Taxi Driver", "The Apprentice", "The Artist", "The Brutalist",
-        "The Constant Gardener", "The Father", "The Gentlemen", "The Irishman", "The Nice Guys",
-        "The Outsider", "The Power of the Dog", "The Revenant", "The Spectacular Now", "There Will Be Blood",
-        "Thunderbolts*", "Top secret !", "Un homme d'exception", "Un parfait inconnu",
-        "Une bataille après l'autre", "Vice-Versa", "Voyage au bout de l'enfer", "Warrior",
-        "When Life Gives You Tangerines", "Wicked", "Yi Yi", "À vif !"
-    ]
-    
-    progress_bar = st.progress(0)
-    status_text = st.empty()
-    
-    records = sheet.get_all_records()
-    existing_ids = [str(r.get('tmdb_id', '')) for r in records]
-    lignes_a_inserer = []
-    
-    for i, titre in enumerate(films_a_ajouter):
-        status_text.text(f"Traitement de : {titre} ({i+1}/{len(films_a_ajouter)})")
-        
-        results = search_movies(titre)
-        if results:
-            tmdb_id = results[0]['id']
-            
-            if str(tmdb_id) not in existing_ids:
-                details = get_movie_details(tmdb_id)
-                lignes_a_inserer.append([
-                    details["tmdb_id"], details["titre"], details["annee"], 
-                    details["duree"], details["genres"], details["note"], 
-                    details["poster_url"], details["streaming"], details["date_ajout"]
-                ])
-                existing_ids.append(str(tmdb_id))
-        
-        progress_bar.progress((i + 1) / len(films_a_ajouter))
-        time.sleep(0.3) 
-        
-    if lignes_a_inserer:
-        status_text.text("Envoi vers Google Sheets...")
-        sheet.append_rows(lignes_a_inserer)
-        st.success("Importation terminée.")
-        time.sleep(2)
-        st.rerun()
-    else:
-        st.info("Tous les films sont déjà dans la liste.")
