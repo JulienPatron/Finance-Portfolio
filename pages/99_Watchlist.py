@@ -97,16 +97,24 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 @st.cache_resource(show_spinner=False)
-def get_google_sheet():
+def get_google_sheet(worksheet_name="sheet1"):
     try:
         gc = gspread.service_account_from_dict(st.secrets["gcp_service_account"])
-        sh = gc.open("Streamlit_Watchlist").sheet1
-        return sh
+        sh = gc.open("Streamlit_Watchlist")
+        return sh.sheet1 if worksheet_name == "sheet1" else sh.worksheet(worksheet_name)
     except Exception as e:
         st.error(f"Erreur de connexion Google Sheets : {e}")
         st.stop()
 
-sheet = get_google_sheet()
+if st.session_state.get("admin_mode", False):
+    worksheet_name = "sheet1"
+elif st.session_state.get("user_mode") == "irene":
+    worksheet_name = "irene"
+else:
+    st.error("Accès non autorisé.")
+    st.stop()
+
+sheet = get_google_sheet(worksheet_name)
 
 TMDB_API_KEY = st.secrets["TMDB_API_KEY"]
 OMDB_API_KEY = st.secrets["OMDB_API_KEY"]
