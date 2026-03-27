@@ -235,17 +235,26 @@ else:
     df['sheet_row'] = df.index + 2 
 
     # --- Section Tri et Filtres ---
-    col1, col2 = st.columns(2)
-    
+    col1, col2, col3 = st.columns(3)
+
     with col1:
         sort_option = st.selectbox(
-            "Trier par :", 
+            "Trier par :",
             ["Date d'ajout (Plus récents d'abord)", "Note (Décroissant)", "Année de sortie (Récent d'abord)", "Ordre alphabétique"]
         )
-        
+
     with col2:
         plateformes_cibles = ["Netflix", "Amazon Prime", "HBO / Max", "Canal+"]
         plateformes_filtre = st.multiselect("Filtrer par plateforme :", plateformes_cibles)
+
+    with col3:
+        all_genres = sorted(set(
+            g.strip()
+            for genres_str in df['genres'].dropna()
+            for g in str(genres_str).split(',')
+            if g.strip()
+        ))
+        genres_filtre = st.multiselect("Filtrer par genre :", all_genres)
 
     # 1. Application du Filtre de Plateforme
     if plateformes_filtre:
@@ -271,7 +280,14 @@ else:
                 
         df = df[df['streaming'].apply(match_platform)]
 
-    # 2. Application du Tri
+    # 2. Filtre par genre
+    if genres_filtre:
+        def match_genre(genres_str):
+            film_genres = [g.strip() for g in str(genres_str).split(',')]
+            return any(g in film_genres for g in genres_filtre)
+        df = df[df['genres'].apply(match_genre)]
+
+    # Application du Tri
     if sort_option == "Date d'ajout (Plus récents d'abord)":
         df = df.sort_values(by='date_ajout', ascending=False)
     elif sort_option == "Note (Décroissant)":
@@ -285,7 +301,7 @@ else:
     st.markdown("<br>", unsafe_allow_html=True)
     
     if df.empty:
-        st.info("Aucun film ne correspond à cette sélection de plateformes.")
+        st.info("Aucun film ne correspond à cette sélection.")
     else:
         cols = st.columns(4)
         
