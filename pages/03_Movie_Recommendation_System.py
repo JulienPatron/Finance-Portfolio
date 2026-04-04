@@ -47,6 +47,19 @@ st.markdown("""
         margin-bottom: 5px;
         color: #000000;
     }
+    .poster-container {
+        position: relative;
+        width: 100%;
+        aspect-ratio: 2 / 3;
+        margin-bottom: 10px;
+        border-radius: 5px;
+        overflow: hidden;
+    }
+    .movie-poster {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -184,7 +197,7 @@ if selected and (go_btn or st.session_state['movie']):
         match_score = int((1 - neighbor_dist) * 100)
 
         with col:
-            st.image(n_info['poster'], use_container_width=True)
+            st.markdown(f'<div class="poster-container"><img src="{n_info["poster"]}" class="movie-poster"></div>', unsafe_allow_html=True)
             
             st.markdown(f'<div class="movie-title">{neighbor_title}</div>', unsafe_allow_html=True)
             
