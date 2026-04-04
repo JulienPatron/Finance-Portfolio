@@ -182,6 +182,9 @@ st.title("Ma Watchlist")
 
 search_query = st.text_input("Titre du film :", placeholder="Rechercher un film...")
 
+if not search_query:
+    st.session_state.pop("closed_query", None)
+
 if search_query and search_query != st.session_state.get("closed_query"):
     results = search_movies(search_query)
     if results:
