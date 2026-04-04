@@ -200,7 +200,7 @@ if search_query:
                 tmdb_id = movie['id']
                 already_in = str(tmdb_id) in existing_ids
 
-                st.image(poster_url, use_container_width=True)
+                st.markdown(f'<div style="position:relative;width:100%;padding-bottom:150%;border-radius:5px;overflow:hidden;margin-bottom:10px;"><img src="{poster_url}" style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;"></div>', unsafe_allow_html=True)
                 label = f"**{titre}** ({annee})"
                 if vo and vo != titre:
                     label += f"  \n*{vo}*"
