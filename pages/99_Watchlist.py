@@ -185,44 +185,41 @@ search_query = st.text_input("Titre du film :", placeholder="Rechercher un film.
 if search_query:
     results = search_movies(search_query)
     if results:
-        options_list = [None] + results
-        
-        def format_result(m):
-            if m is None:
-                return "-- Sélectionner un film --"
-            
-            titre = m.get('title', 'Titre inconnu')
-            annee = m.get('release_date', '????')[:4]
-            vo = m.get('original_title', '')
-            votes = m.get('vote_count', 0) 
-            
-            label = f"{titre} ({annee})"
-            
-            if vo and vo != titre:
-                label += f" [VO : {vo}]"
-            
-            label += f" ({votes} avis)"
-            
-            return label
+        st.markdown("**Résultats :**")
+        existing_ids = {str(r.get('tmdb_id', '')) for r in sheet.get_all_records()}
 
-        selected_movie = st.selectbox("Résultats :", options_list, format_func=format_result)
-        
-        if selected_movie is not None:
-            tmdb_id = selected_movie['id']
-            records = sheet.get_all_records()
-            
-            if any(str(r.get('tmdb_id', '')) == str(tmdb_id) for r in records):
-                st.warning("Ce film est déjà dans la Watchlist.")
-            else:
-                details = get_movie_details(tmdb_id)
-                row_to_insert = [
-                    details["tmdb_id"], details["titre"], details["annee"], 
-                    details["duree"], details["genres"], details["note"], 
-                    details["poster_url"], details["streaming"], details["date_ajout"],
-                    details["synopsis"]
-                ]
-                sheet.append_row(row_to_insert)
-                st.rerun()
+        cols = st.columns(5)
+        for i, movie in enumerate(results):
+            with cols[i % 5]:
+                titre = movie.get('title', 'Titre inconnu')
+                annee = movie.get('release_date', '????')[:4]
+                vo = movie.get('original_title', '')
+                votes = movie.get('vote_count', 0)
+                poster_path = movie.get('poster_path')
+                poster_url = f"https://image.tmdb.org/t/p/w185{poster_path}" if poster_path else "https://via.placeholder.com/185x278?text=N/A"
+                tmdb_id = movie['id']
+                already_in = str(tmdb_id) in existing_ids
+
+                st.image(poster_url, use_container_width=True)
+                label = f"**{titre}** ({annee})"
+                if vo and vo != titre:
+                    label += f"  \n*{vo}*"
+                label += f"  \n{votes} avis"
+                st.markdown(label)
+
+                if already_in:
+                    st.button("Déjà ajouté", key=f"add_{tmdb_id}", disabled=True, use_container_width=True)
+                else:
+                    if st.button("Ajouter", key=f"add_{tmdb_id}", use_container_width=True):
+                        details = get_movie_details(tmdb_id)
+                        row_to_insert = [
+                            details["tmdb_id"], details["titre"], details["annee"],
+                            details["duree"], details["genres"], details["note"],
+                            details["poster_url"], details["streaming"], details["date_ajout"],
+                            details["synopsis"]
+                        ]
+                        sheet.append_row(row_to_insert)
+                        st.rerun()
 
 st.divider()
 
