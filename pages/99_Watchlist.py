@@ -201,11 +201,8 @@ if search_query:
                 already_in = str(tmdb_id) in existing_ids
 
                 st.markdown(f'<div style="position:relative;width:100%;padding-bottom:150%;border-radius:5px;overflow:hidden;margin-bottom:10px;"><img src="{poster_url}" style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;"></div>', unsafe_allow_html=True)
-                label = f"**{titre}** ({annee})"
-                if vo and vo != titre:
-                    label += f"  \n*{vo}*"
-                label += f"  \n{votes} avis"
-                st.markdown(label)
+                vo_line = f'<div style="font-size:11px;color:#888;font-style:italic;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{vo}</div>' if vo and vo != titre else '<div style="font-size:11px;">&nbsp;</div>'
+                st.markdown(f'''<div style="font-weight:bold;font-size:13px;line-height:1.3em;height:2.6em;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">{titre} ({annee})</div>{vo_line}<div style="font-size:12px;color:#555;">{votes} avis</div>''', unsafe_allow_html=True)
 
                 if already_in:
                     st.button("Déjà ajouté", key=f"add_{tmdb_id}", disabled=True, use_container_width=True)
