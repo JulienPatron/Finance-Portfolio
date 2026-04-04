@@ -180,46 +180,51 @@ def get_movie_details(tmdb_id):
 
 st.title("Ma Watchlist")
 
-if "added_for_query" not in st.session_state:
-    st.session_state["added_for_query"] = None
-
 search_query = st.text_input("Titre du film :", placeholder="Rechercher un film...")
 
-if search_query and search_query != st.session_state["added_for_query"]:
+if search_query and search_query != st.session_state.get("closed_query"):
     results = search_movies(search_query)
     if results:
-        st.markdown("**Résultats :**")
-        existing_ids = {str(r.get('tmdb_id', '')) for r in sheet.get_all_records()}
+        col_titre, col_btn = st.columns([6, 1])
+        with col_titre:
+            st.markdown("**Résultats :**")
+        with col_btn:
+            if st.button("Fermer ✕", use_container_width=True):
+                st.session_state["closed_query"] = search_query
+                st.rerun()
 
-        cols = st.columns(5)
-        for i, movie in enumerate(results):
-            with cols[i % 5]:
-                titre = movie.get('title', 'Titre inconnu')
-                annee = movie.get('release_date', '????')[:4]
-                vo = movie.get('original_title', '')
-                votes = movie.get('vote_count', 0)
-                poster_path = movie.get('poster_path')
-                poster_url = f"https://image.tmdb.org/t/p/w185{poster_path}" if poster_path else "https://via.placeholder.com/185x278?text=N/A"
-                tmdb_id = movie['id']
-                already_in = str(tmdb_id) in existing_ids
+        if st.session_state.get("closed_query") != search_query:
+            existing_ids = {str(r.get('tmdb_id', '')) for r in sheet.get_all_records()}
 
-                st.markdown(f'<div style="position:relative;width:100%;padding-bottom:150%;border-radius:5px;overflow:hidden;margin-bottom:10px;"><img src="{poster_url}" style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;"></div>', unsafe_allow_html=True)
-                vo_line = f'<div style="font-size:11px;color:#888;font-style:italic;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{vo}</div>' if vo and vo != titre else '<div style="font-size:11px;">&nbsp;</div>'
-                st.markdown(f'''<div style="font-weight:bold;font-size:13px;line-height:1.3em;height:2.6em;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">{titre} ({annee})</div>{vo_line}<div style="font-size:12px;color:#555;">{votes} avis</div>''', unsafe_allow_html=True)
+            cols = st.columns(5)
+            for i, movie in enumerate(results):
+                with cols[i % 5]:
+                    titre = movie.get('title', 'Titre inconnu')
+                    annee = movie.get('release_date', '????')[:4]
+                    vo = movie.get('original_title', '')
+                    votes = movie.get('vote_count', 0)
+                    poster_path = movie.get('poster_path')
+                    poster_url = f"https://image.tmdb.org/t/p/w185{poster_path}" if poster_path else "https://via.placeholder.com/185x278?text=N/A"
+                    tmdb_id = movie['id']
+                    already_in = str(tmdb_id) in existing_ids
 
-                if already_in:
-                    st.button("Déjà ajouté", key=f"add_{tmdb_id}", disabled=True, use_container_width=True)
-                else:
-                    if st.button("Ajouter", key=f"add_{tmdb_id}", use_container_width=True):
-                        details = get_movie_details(tmdb_id)
-                        row_to_insert = [
-                            details["tmdb_id"], details["titre"], details["annee"],
-                            details["duree"], details["genres"], details["note"],
-                            details["poster_url"], details["streaming"], details["date_ajout"],
-                            details["synopsis"]
-                        ]
-                        sheet.append_row(row_to_insert)
-                        st.session_state["added_for_query"] = search_query
+                    st.markdown(f'<div style="position:relative;width:100%;padding-bottom:150%;border-radius:5px;overflow:hidden;margin-bottom:10px;"><img src="{poster_url}" style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;"></div>', unsafe_allow_html=True)
+                    vo_line = f'<div style="font-size:11px;color:#888;font-style:italic;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{vo}</div>' if vo and vo != titre else '<div style="font-size:11px;">&nbsp;</div>'
+                    st.markdown(f'''<div style="font-weight:bold;font-size:13px;line-height:1.3em;height:2.6em;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">{titre} ({annee})</div>{vo_line}<div style="font-size:12px;color:#555;">{votes} avis</div>''', unsafe_allow_html=True)
+
+                    if already_in:
+                        st.button("Déjà ajouté", key=f"add_{tmdb_id}", disabled=True, use_container_width=True)
+                    else:
+                        if st.button("Ajouter", key=f"add_{tmdb_id}", use_container_width=True):
+                            details = get_movie_details(tmdb_id)
+                            row_to_insert = [
+                                details["tmdb_id"], details["titre"], details["annee"],
+                                details["duree"], details["genres"], details["note"],
+                                details["poster_url"], details["streaming"], details["date_ajout"],
+                                details["synopsis"]
+                            ]
+                            sheet.append_row(row_to_insert)
+                            st.rerun()
 
 st.divider()
 
