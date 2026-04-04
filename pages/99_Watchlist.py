@@ -180,7 +180,7 @@ def get_movie_details(tmdb_id):
 
 st.title("Ma Watchlist")
 
-search_query = st.text_input("Titre du film :", placeholder="Rechercher un film...")
+search_query = st.text_input("Titre du film :", placeholder="Rechercher un film...", key="search_input")
 
 if search_query:
     results = search_movies(search_query)
@@ -216,6 +216,7 @@ if search_query:
                             details["synopsis"]
                         ]
                         sheet.append_row(row_to_insert)
+                        st.session_state["search_input"] = ""
                         st.rerun()
 
 st.divider()
