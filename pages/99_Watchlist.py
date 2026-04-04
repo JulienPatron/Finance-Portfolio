@@ -182,10 +182,11 @@ st.title("Ma Watchlist")
 
 search_query = st.text_input("Titre du film :", placeholder="Rechercher un film...")
 
-if not search_query:
-    st.session_state.pop("closed_query", None)
+if search_query != st.session_state.get("prev_query", ""):
+    st.session_state["prev_query"] = search_query
+    st.session_state["show_results"] = True
 
-if search_query and search_query != st.session_state.get("closed_query"):
+if search_query and st.session_state.get("show_results", True):
     results = search_movies(search_query)
     if results:
         col_titre, col_btn = st.columns([6, 1])
@@ -193,10 +194,10 @@ if search_query and search_query != st.session_state.get("closed_query"):
             st.markdown("**Résultats :**")
         with col_btn:
             if st.button("Fermer ✕", use_container_width=True):
-                st.session_state["closed_query"] = search_query
+                st.session_state["show_results"] = False
                 st.rerun()
 
-        if st.session_state.get("closed_query") != search_query:
+        if st.session_state.get("show_results", True):
             existing_ids = {str(r.get('tmdb_id', '')) for r in sheet.get_all_records()}
 
             cols = st.columns(5)
