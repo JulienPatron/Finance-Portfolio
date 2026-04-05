@@ -6,7 +6,6 @@ import datetime
 import ast
 import re
 import json
-import time
 
 st.set_page_config(page_title="Ma Watchlist", layout="wide")
 
@@ -203,18 +202,23 @@ TMDB_IDS_TO_RELOAD = [
 
 if st.session_state.get("admin_mode", False):
     if st.button("Reuploader tous les films", type="primary"):
-        progress = st.progress(0, text="Récupération en cours...")
+        progress = st.progress(0, text="Récupération des données...")
         total = len(TMDB_IDS_TO_RELOAD)
+        all_rows = []
         for i, tmdb_id in enumerate(TMDB_IDS_TO_RELOAD):
             details = get_movie_details(tmdb_id)
-            sheet.append_row([
+            all_rows.append([
                 details["tmdb_id"], details["titre"], details["annee"],
                 details["duree"], details["genres"], details["note"],
                 details["poster_url"], details["streaming"], details["date_ajout"],
                 details["synopsis"], details["note_letterboxd"]
             ])
             progress.progress((i + 1) / total, text=f"{details['titre']} ({i+1}/{total})")
-            time.sleep(1.2)
+        progress.progress(1.0, text="Insertion dans Google Sheets...")
+        gc = gspread.service_account_from_dict(st.secrets["gcp_service_account"])
+        sh = gc.open("Streamlit_Watchlist")
+        ws = sh.sheet1 if worksheet_name == "sheet1" else sh.worksheet(worksheet_name)
+        ws.append_rows(all_rows, value_input_option="USER_ENTERED")
         st.success("Tous les films ont été rechargés !")
         st.rerun()
 
