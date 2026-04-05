@@ -4,8 +4,6 @@ import requests
 import gspread
 import datetime
 import ast
-import re
-import json
 
 st.set_page_config(page_title="Ma Watchlist", layout="wide")
 
@@ -115,22 +113,6 @@ def get_providers_mapping():
         for p in data.get('results', [])
     }
 
-def get_letterboxd_rating(imdb_id):
-    if not imdb_id:
-        return "N/A"
-    try:
-        url = f"https://letterboxd.com/imdb/{imdb_id}/"
-        r = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=5)
-        match = re.search(r'<script type="application/ld\+json">(.*?)</script>', r.text, re.DOTALL)
-        if match:
-            data = json.loads(match.group(1))
-            rating = data.get('aggregateRating', {}).get('ratingValue')
-            if rating:
-                return str(round(float(rating), 2))
-    except:
-        pass
-    return "N/A"
-
 def search_movies(query):
     url = f"https://api.themoviedb.org/3/search/movie?api_key={TMDB_API_KEY}&query={query}&language=fr-FR&page=1"
     return requests.get(url).json().get('results', [])[:10]
@@ -169,8 +151,7 @@ def get_movie_details(tmdb_id):
         "poster_url": f"https://image.tmdb.org/t/p/w500{data['poster_path']}" if data.get('poster_path') else "https://via.placeholder.com/300x450?text=No+Image",
         "streaming": str(streaming_logos),
         "date_ajout": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "synopsis": synopsis,
-        "note_letterboxd": get_letterboxd_rating(imdb_id)
+        "synopsis": synopsis
     }
 
 # --- UI ---
@@ -186,41 +167,6 @@ search_query = st.text_input(
     key=f"search_{st.session_state['search_key']}"
 )
 
-TMDB_IDS_TO_RELOAD = [
-    76203, 451945, 530915, 62, 965150, 149, 915935, 1064213, 28, 68734,
-    168672, 430424, 637534, 3543, 3175, 76, 663260, 776503, 17654, 374720,
-    10189, 12162, 559969, 181886, 13020, 275, 369972, 419430, 210577, 858024,
-    949, 857, 46738, 15383, 1050035, 4922, 15097, 957, 406, 497, 424, 329819,
-    467244, 207, 194, 14574, 1213, 491480, 296098, 142, 568160, 9693, 51876,
-    334543, 153, 1317288, 228203, 77, 11423, 530385, 376867, 322, 3683,
-    242582, 6977, 670, 695089, 666277, 531428, 14337, 146233, 855823, 58496,
-    11324, 381288, 103, 1182047, 74643, 549509, 1985, 600354, 522627, 398978,
-    290250, 199928, 600583, 157386, 7345, 986056, 8764, 453, 661539, 1054867,
-    1022789, 11778, 59440, 402431, 25538, 295964, 2567, 290098, 103663, 82693,
-    359940, 286217, 823452, 687163, 1327819
-]
-
-if st.session_state.get("admin_mode", False):
-    if st.button("Reuploader tous les films", type="primary"):
-        progress = st.progress(0, text="Récupération des données...")
-        total = len(TMDB_IDS_TO_RELOAD)
-        all_rows = []
-        for i, tmdb_id in enumerate(TMDB_IDS_TO_RELOAD):
-            details = get_movie_details(tmdb_id)
-            all_rows.append([
-                details["tmdb_id"], details["titre"], details["annee"],
-                details["duree"], details["genres"], details["note"],
-                details["poster_url"], details["streaming"], details["date_ajout"],
-                details["synopsis"], details["note_letterboxd"]
-            ])
-            progress.progress((i + 1) / total, text=f"{details['titre']} ({i+1}/{total})")
-        progress.progress(1.0, text="Insertion dans Google Sheets...")
-        gc = gspread.service_account_from_dict(st.secrets["gcp_service_account"])
-        sh = gc.open("Streamlit_Watchlist")
-        ws = sh.sheet1 if worksheet_name == "sheet1" else sh.worksheet(worksheet_name)
-        ws.append_rows(all_rows, value_input_option="USER_ENTERED")
-        st.success("Tous les films ont été rechargés !")
-        st.rerun()
 
 if search_query:
     results = search_movies(search_query)
@@ -272,7 +218,7 @@ if search_query:
                             details["tmdb_id"], details["titre"], details["annee"],
                             details["duree"], details["genres"], details["note"],
                             details["poster_url"], details["streaming"], details["date_ajout"],
-                            details["synopsis"], details["note_letterboxd"]
+                            details["synopsis"]
                         ])
                         st.rerun()
 
@@ -293,8 +239,7 @@ else:
     with col1:
         sort_option = st.selectbox("Trier par :", [
             "Date d'ajout (Plus récents d'abord)",
-            "Note IMDB (Décroissant)",
-            "Note Letterboxd (Décroissant)",
+            "Note (Décroissant)",
             "Année de sortie (Récent d'abord)",
             "Ordre alphabétique"
         ])
@@ -335,12 +280,9 @@ else:
 
     if sort_option == "Date d'ajout (Plus récents d'abord)":
         df = df.sort_values('date_ajout', ascending=False)
-    elif sort_option == "Note IMDB (Décroissant)":
+    elif sort_option == "Note (Décroissant)":
         df['note_num'] = pd.to_numeric(df['note'], errors='coerce')
         df = df.sort_values('note_num', ascending=False)
-    elif sort_option == "Note Letterboxd (Décroissant)":
-        df['note_lb_num'] = pd.to_numeric(df.get('note_letterboxd', pd.Series(dtype=str)), errors='coerce')
-        df = df.sort_values('note_lb_num', ascending=False)
     elif sort_option == "Année de sortie (Récent d'abord)":
         df = df.sort_values('annee', ascending=False)
     elif sort_option == "Ordre alphabétique":
@@ -370,7 +312,7 @@ else:
                         <div class="synopsis-overlay">{synopsis_ui}</div>
                     </div>
                     <div class="movie-title">{row['titre']} ({row['annee']})</div>
-                    <div class="movie-meta">IMDB {row['note']}/10 | LB {row.get('note_letterboxd', 'N/A')}/5 | {row['duree']}<br>{row['genres']}</div>
+                    <div class="movie-meta">{row['note']}/10 | {row['duree']}<br>{row['genres']}</div>
                     <div class="streaming-container">{logos_html}</div>
                     """, unsafe_allow_html=True)
 
