@@ -6,6 +6,7 @@ import datetime
 import ast
 import re
 import json
+import time
 
 st.set_page_config(page_title="Ma Watchlist", layout="wide")
 
@@ -213,6 +214,7 @@ if st.session_state.get("admin_mode", False):
                 details["synopsis"], details["note_letterboxd"]
             ])
             progress.progress((i + 1) / total, text=f"{details['titre']} ({i+1}/{total})")
+            time.sleep(1.2)
         st.success("Tous les films ont été rechargés !")
         st.rerun()
 
